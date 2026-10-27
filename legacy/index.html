@@ -1,0 +1,2186 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instagram HAR Analyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f5f3; --surface:#fcfcfb; --surface-2:#efeeeb; --border:#e2e1dc;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#7b7a75;
+  --accent:#2a78d6; --accent-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --neutral:#8a8983;
+  --heat-rgb:42,120,214;
+  --good:#0a7d36; --good-bg:#e3f4e8; --warn:#9a6200; --warn-bg:#fdf1d8;
+  --bad:#b4232a; --bad-bg:#fbe5e5; --info-bg:#e8f1fc;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#111110; --surface:#1a1a19; --surface-2:#242422; --border:#33322f;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+    --accent:#3987e5; --accent-ink:#ffffff;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --neutral:#8f8e86;
+    --heat-rgb:57,135,229;
+    --good:#5fd38a; --good-bg:#16301f; --warn:#f0b54a; --warn-bg:#33270f;
+    --bad:#ff8a8a; --bad-bg:#3a1a1a; --info-bg:#172536;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#111110; --surface:#1a1a19; --surface-2:#242422; --border:#33322f;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+  --accent:#3987e5; --accent-ink:#ffffff;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --neutral:#8f8e86;
+  --heat-rgb:57,135,229;
+  --good:#5fd38a; --good-bg:#16301f; --warn:#f0b54a; --warn-bg:#33270f;
+  --bad:#ff8a8a; --bad-bg:#3a1a1a; --info-bg:#172536;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+header.top .wrap{display:flex;align-items:center;gap:12px;min-height:56px;flex-wrap:wrap;padding-block:8px}
+.brand{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand .dot{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#eb6834,#e87ba4 55%,#6250d6)}
+.btn{appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:9px;padding:7px 12px;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:4px 9px;font-size:12px}
+select.btn{padding-right:8px}
+.warnbar{background:var(--warn-bg);color:var(--warn);font-size:12.5px;padding:8px 12px;border-radius:10px;margin:14px 0 0;display:flex;gap:8px;align-items:flex-start}
+.drop{display:block;margin:24px 0;border:2px dashed var(--border);border-radius:18px;background:var(--surface);padding:48px 20px;text-align:center;transition:.15s;cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--info-bg)}
+.drop h1{font-size:24px;margin:0 0 6px}
+.drop p{color:var(--text-2);margin:4px 0}
+.drop .big{font-size:40px;line-height:1;margin-bottom:10px}
+.howto{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:28px}
+.howto h2{font-size:16px;margin:0 0 8px}
+.howto ol{margin:0;padding-left:20px;color:var(--text-2)}
+.howto li{margin:4px 0}
+nav.sections{display:flex;gap:6px;overflow-x:auto;padding:10px 0;scrollbar-width:thin}
+nav.sections a{text-decoration:none;color:var(--text-2);font-size:12.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);white-space:nowrap}
+nav.sections a:hover{color:var(--text);border-color:var(--accent)}
+section.block{margin:18px 0 26px}
+section.block>h2{font-size:18px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+section.block>h2 .num{font-size:12px;color:var(--muted);font-weight:600;border:1px solid var(--border);border-radius:6px;padding:0 6px}
+section.block>.sub{color:var(--text-2);margin:0 0 12px;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0 0 10px;font-size:14px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr))}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.kpi .l{color:var(--text-2);font-size:12px}
+.kpi .v{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--muted);font-size:11.5px;margin-top:2px}
+.profile{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.profile .avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#eb6834,#e87ba4 55%,#6250d6);display:grid;place-items:center;color:#fff;font-weight:700;font-size:22px;flex:none}
+.profile .meta{flex:1;min-width:220px}
+.profile .name{font-size:18px;font-weight:700}
+.profile .bio{white-space:pre-wrap;color:var(--text-2);font-size:13px;margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.b-low{background:var(--bad-bg);color:var(--bad)}
+.b-avg{background:var(--warn-bg);color:var(--warn)}
+.b-good{background:var(--info-bg);color:var(--accent)}
+.b-great{background:var(--good-bg);color:var(--good)}
+.b-na{background:var(--surface-2);color:var(--muted)}
+.b-est{background:var(--warn-bg);color:var(--warn)}
+.chip{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:6px;background:var(--surface-2);color:var(--text-2);margin:2px 3px 2px 0}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--text-2);font-weight:600;font-size:12px;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{max-width:340px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chart-box{position:relative;height:260px}
+.chart-box.tall{height:300px}
+.na{color:var(--muted);font-style:italic;font-size:13px}
+.heat-wrap{overflow-x:auto}
+.heat{display:grid;grid-template-columns:52px repeat(24,minmax(22px,1fr));gap:2px;min-width:640px;font-size:10.5px}
+.heat .hl{color:var(--muted);text-align:center;padding:2px 0}
+.heat .dl{color:var(--text-2);font-weight:600;display:flex;align-items:center;font-size:11.5px}
+.heat .c{height:26px;border-radius:4px;background:var(--surface-2);display:grid;place-items:center;font-size:10px;color:var(--text);font-variant-numeric:tabular-nums}
+.heat .c.has{cursor:default}
+.heat-legend{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--muted);font-size:11.5px;flex-wrap:wrap}
+.heat-legend .ramp{width:140px;height:10px;border-radius:5px;background:linear-gradient(90deg,rgba(var(--heat-rgb),.12),rgba(var(--heat-rgb),1))}
+.list-insights{margin:0;padding:0;list-style:none;counter-reset:i}
+.list-insights li{counter-increment:i;padding:10px 0 10px 40px;position:relative;border-bottom:1px solid var(--border)}
+.list-insights li:last-child{border-bottom:0}
+.list-insights li::before{content:counter(i);position:absolute;left:0;top:10px;width:26px;height:26px;border-radius:8px;background:var(--info-bg);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px}
+.recs li::before{background:var(--good-bg);color:var(--good)}
+.list-insights b{color:var(--text)}
+.list-insights .why{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.split{display:flex;gap:10px;flex-wrap:wrap}
+.split>*{flex:1 1 140px}
+.bar-h{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+.bar-h>span{display:block;height:100%;border-radius:4px}
+details.debug{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin:20px 0 40px}
+details.debug summary{cursor:pointer;font-weight:600}
+details.debug h4{margin:14px 0 6px;font-size:13px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--text);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:8px;max-width:260px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:60}
+.loading{padding:40px;text-align:center;color:var(--text-2)}
+.ah{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ah h3{margin:0}
+.subhead{font-size:15px;margin:22px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card.note{margin-bottom:12px}
+.hint{color:var(--text-2);font-size:12px;margin:4px 0 0}
+.sumtext{width:100%;box-sizing:border-box;resize:vertical;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.dist .dr{display:grid;grid-template-columns:minmax(70px,36%) 1fr auto;gap:8px;align-items:center;font-size:12.5px;margin:6px 0}
+.dist .dlab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)}
+.dist .db{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.dist .db>span{display:block;height:100%;border-radius:4px}
+.dist .dv{font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;font-size:12px}
+.mini-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.mini-h{font-size:12px;font-weight:600;color:var(--text-2);margin:2px 0 2px}
+.span2{grid-column:span 2}
+.span-all{grid-column:1/-1}
+@media (max-width:760px){.span2{grid-column:auto}}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;margin:6px 0 8px}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.kv span:first-child{color:var(--text-2)}
+.exs{font-size:12px;color:var(--text-2);margin-top:8px;display:grid;gap:4px}
+.ratio{display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+.ratio>div{flex:1 1 60px;text-align:center}
+.ratio .rv{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.ratio .rl{font-size:12px;color:var(--text-2)}
+.ratio .rt{font-size:10.5px;color:var(--muted)}
+.ratio .rsep{font-size:20px;color:var(--muted);padding-top:2px}
+.kpis.tight .kpi{padding:10px}
+.kpis.tight .kpi .v{font-size:20px}
+.scroll-y{max-height:420px;overflow:auto}
+.scroll-y.sm{max-height:200px}
+.scroll-y.tall{max-height:560px}
+.scroll-y thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+tr.hl td{background:var(--info-bg)}
+td.ctext{min-width:220px;max-width:420px;white-space:pre-wrap;word-break:break-word}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.filters input{min-width:0;flex:1 1 200px;font-weight:400}
+.chart-box.short{height:190px}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:16px 0 32px}
+.print-only{display:none}
+@media (max-width:600px){
+  .kpi .v{font-size:20px}
+  .drop{padding:32px 14px}
+  .drop h1{font-size:20px}
+}
+@media print{
+  :root,:root[data-theme="dark"]{color-scheme:light;--bg:#fff;--surface:#fff;--surface-2:#f1f1ef;--border:#ddd;--text:#000;--text-2:#333;--muted:#666;--shadow:none}
+  header.top,nav.sections,.no-print,details.debug,#tip,.drop,.howto{display:none!important}
+  .print-only{display:block}
+  body{font-size:12px}
+  .card,.kpi,section.block{break-inside:avoid}
+  section.block{page-break-inside:auto}
+  .chart-box{height:230px}
+  .scroll-y,.scroll-y.tall,.scroll-y.sm{max-height:none;overflow:visible}
+  .g3,.g2{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="dot" aria-hidden="true"></span>Instagram HAR Analyzer</div>
+    <select id="acctSel" class="btn" hidden title="Pilih akun"></select>
+    <button class="btn" id="btnNew" hidden>↺ File baru</button>
+    <button class="btn" id="btnCsv" hidden>⬇ CSV post</button>
+    <button class="btn" id="btnCsvC" hidden>⬇ CSV komentar</button>
+    <button class="btn" id="btnCopy" hidden title="Salin ringkasan laporan ke clipboard">📋 Salin ringkasan</button>
+    <button class="btn primary" id="btnPdf" hidden>🖨 PDF / Print</button>
+    <button class="btn" id="btnTheme" title="Ganti tema">◐</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="warnbar no-print" role="note">🔒 <span><b>File HAR berisi cookie &amp; sesi login Instagram.</b> Jangan bagikan file .har ke siapa pun. Tool ini berjalan 100% lokal di browser: hanya membaca <i>response body</i>, mengabaikan header/cookie/token, dan tidak menyimpan file mentah.</span></div>
+
+  <div id="start">
+    <label class="drop" id="drop" for="fileIn">
+      <div class="big">📂</div>
+      <h1>Tarik &amp; lepas file .har di sini</h1>
+      <p>atau klik untuk memilih file (boleh beberapa sekaligus)</p>
+      <p style="font-size:12px;color:var(--muted)">Diproses lokal, tidak ada data yang dikirim ke server.</p>
+      <input type="file" id="fileIn" accept=".har,application/json" multiple hidden>
+    </label>
+    <div class="howto">
+      <h2>Cara mengambil file .har (hasil paling lengkap)</h2>
+      <ol>
+        <li>Buka Chrome/Edge, login Instagram, lalu buka <b>DevTools</b> (F12 / Cmd+Opt+I) → tab <b>Network</b>. Centang <b>Preserve log</b>, ketik <code>graphql</code> di kolom filter.</li>
+        <li>Buka <code>instagram.com/NAMAAKUN/</code> (halaman profil) → refresh halaman supaya query profil (followers, bio) ikut terekam.</li>
+        <li><b>Scroll grid post</b> sampai sejauh periode yang mau dianalisa (mis. 3 bulan / 50–100 post).</li>
+        <li>Buka tab <b>Reels</b> (<code>/NAMAAKUN/reels/</code>) dan scroll juga — di sinilah jumlah <b>views/plays</b> biasanya muncul.</li>
+        <li>Untuk analisa komentar &amp; jam aktif audience: buka 5–10 post (terutama yang ramai), scroll kolom komentar &amp; klik "lihat komentar lainnya".</li>
+        <li>Akun sendiri/klien dengan akses: buka <b>Professional Dashboard / Insights</b> post dan akun untuk data reach, saves, shares, audience.</li>
+        <li>Klik kanan daftar request → <b>Save all as HAR with content</b> (atau ikon ⬇ "Export HAR"). Upload file itu ke sini.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="loading" class="loading" hidden>Memproses file…</div>
+  <div id="dash" hidden></div>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+/*CORE-START*/
+const Core = (() => {
+  const TZ_OFFSET = 7 * 3600; // Asia/Jakarta, UTC+7, tanpa DST
+  const DAYS = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+  const TYPE_LABEL = { reel: 'Reel', carousel: 'Carousel', foto: 'Foto' };
+  const TYPES = ['reel', 'carousel', 'foto'];
+
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  function num(...vals) {
+    for (const v of vals) {
+      if (isNum(v)) return v;
+      if (typeof v === 'string' && /^\d+$/.test(v)) return Number(v);
+      if (v && typeof v === 'object' && isNum(v.count)) return v.count;
+    }
+    return null;
+  }
+  const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
+  const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const vals = (arr, f) => arr.map(f).filter(isNum);
+
+  function createStore() {
+    return {
+      posts: new Map(), profiles: new Map(), comments: new Map(), mediaPkToCode: new Map(),
+      queries: new Map(), files: [],
+      insights: { account: {}, audienceHours: null, audienceDays: null, audienceRaw: [], demo: {}, followerSplit: null, traffic: null, metrics: {}, breakdowns: {}, topMedia: new Map(), period: null },
+      debug: { entries: 0, graphql: 0, rest: 0, skipped: 0, decodeFail: 0, parseFail: 0, emptyBody: 0 },
+      captureTs: 0,
+    };
+  }
+
+  // ---------- Decoding ----------
+  function decodeContent(c) {
+    if (!c || typeof c.text !== 'string' || !c.text) return '';
+    if (c.encoding === 'base64') {
+      try {
+        const bin = atob(c.text);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch (e) { return null; }
+    }
+    return c.text;
+  }
+  const stripGuard = s => s.replace(/^\s*for\s*\(;;\);/, '');
+  function tryJSON(s) { try { return JSON.parse(s); } catch (e) { return undefined; } }
+  function parseBodies(text) {
+    let t = stripGuard(text || '').trim();
+    if (!t) return [];
+    const whole = tryJSON(t);
+    if (whole !== undefined) return [whole];
+    const out = [];
+    // multipart: potong berdasarkan boundary, buang header tiap part
+    const parts = /\r?\n--[^\r\n]*/.test(t) ? t.split(/\r?\n?--[-\w=.]*\r?\n/) : [t];
+    for (let p of parts) {
+      const hdr = p.search(/\r?\n\r?\n/);
+      if (hdr >= 0 && /^\s*content-type/i.test(p)) p = p.slice(hdr).trim();
+      p = stripGuard(p).trim();
+      if (!p) continue;
+      const j = tryJSON(p);
+      if (j !== undefined) { out.push(j); continue; }
+      // streaming: satu JSON per baris
+      for (const line of p.split(/\r?\n/)) {
+        const l = stripGuard(line).trim();
+        if (l[0] === '{' || l[0] === '[') { const lj = tryJSON(l); if (lj !== undefined) out.push(lj); }
+      }
+    }
+    return out;
+  }
+
+  // ---------- Ingest ----------
+  const REST_RE = /\/api\/v1\/(feed\/user\/|users\/web_profile_info|users\/\d+\/info|media\/\d+\/(comments|info)|clips\/user|feed\/reels_media)|web_profile_info|\/api\/v1\/insights|\/api\/v1\/business/;
+
+  function requestMeta(req) {
+    // HANYA mengambil friendly_name, doc_id, variables. Header, cookie, dan token lain diabaikan.
+    const p = new URLSearchParams();
+    const pd = req.postData || {};
+    // postData.text lebih dulu (sudah ter-decode oleh URLSearchParams); params di HAR Chrome masih URL-encoded
+    if (typeof pd.text === 'string' && pd.text.includes('=')) {
+      try { new URLSearchParams(pd.text).forEach((v, k) => p.append(k, v)); } catch (e) {}
+    } else if (Array.isArray(pd.params)) {
+      const dec = v => { try { return decodeURIComponent(String(v || '').replace(/\+/g, ' ')); } catch (e) { return v || ''; } };
+      pd.params.forEach(x => x && x.name && p.append(dec(x.name), dec(x.value)));
+    }
+    try { new URL(req.url).searchParams.forEach((v, k) => p.append(k, v)); } catch (e) {}
+    let vars = {};
+    const vs = p.get('variables');
+    if (vs) vars = tryJSON(vs) || {};
+    return {
+      name: p.get('fb_api_req_friendly_name') || p.get('query_name') || '',
+      doc: p.get('doc_id') || p.get('query_hash') || p.get('query_id') || '',
+      vars,
+    };
+  }
+
+  function ingestHar(store, har, fileName) {
+    const entries = har && har.log && Array.isArray(har.log.entries) ? har.log.entries : null;
+    if (!entries) throw new Error('Bukan file HAR yang valid (log.entries tidak ditemukan).');
+    const finfo = { name: fileName, entries: entries.length, used: 0, captureTs: 0 };
+    for (const e of entries) {
+      store.debug.entries++;
+      const url = (e.request && e.request.url) || '';
+      const ts = Date.parse(e.startedDateTime) || 0;
+      if (ts > finfo.captureTs) finfo.captureTs = ts;
+      const isG = /\/graphql\/query|\/api\/graphql/.test(url);
+      const isR = !isG && /instagram\.com/.test(url) && REST_RE.test(url);
+      if (!isG && !isR) { store.debug.skipped++; continue; }
+      isG ? store.debug.graphql++ : store.debug.rest++;
+      finfo.used++;
+      let name, doc, vars = {};
+      if (isG) ({ name, doc, vars } = requestMeta(e.request));
+      else {
+        let path = url; try { path = new URL(url).pathname; } catch (er) {}
+        name = 'REST ' + path.replace(/\d{5,}/g, '{id}').replace(/\/[^/]+_\d+\//, '/{id}/');
+        doc = '-';
+      }
+      const qkey = (name || '(tanpa nama)') + '|' + (doc || '?');
+      let q = store.queries.get(qkey);
+      if (!q) { q = { name: name || '(tanpa nama)', doc: doc || '?', kind: isG ? 'GraphQL' : 'REST', requests: 0, posts: new Set(), comments: 0, profiles: 0, insights: 0, fails: 0, encodings: new Set() }; store.queries.set(qkey, q); }
+      q.requests++;
+      const c = (e.response && e.response.content) || {};
+      q.encodings.add(c.encoding || 'plain');
+      const body = decodeContent(c);
+      if (body === null) { store.debug.decodeFail++; q.fails++; continue; }
+      if (!body) { store.debug.emptyBody++; q.fails++; continue; }
+      const objs = parseBodies(body);
+      if (!objs.length) { store.debug.parseFail++; q.fails++; continue; }
+      let mediaHint = vars.media_id || vars.mediaID || vars.media_pk || null;
+      const mm = /\/media\/(\d+)\//.exec(url); if (mm) mediaHint = mm[1];
+      const ctx = { q, ts, vars, mediaHint: mediaHint ? String(mediaHint).split('_')[0] : null };
+      for (const o of objs) walk(store, o, ctx, null, null, 0);
+    }
+    if (finfo.captureTs > store.captureTs) store.captureTs = finfo.captureTs;
+    store.files.push(finfo);
+    return finfo;
+  }
+
+  function isMedia(o) {
+    return (typeof o.code === 'string' || typeof o.shortcode === 'string') &&
+      (o.taken_at != null || o.taken_at_timestamp != null) &&
+      ('media_type' in o || '__typename' in o || 'like_count' in o || 'edge_media_preview_like' in o || 'edge_liked_by' in o);
+  }
+  function isProfile(o) {
+    return typeof o.username === 'string' &&
+      (num(o.follower_count) != null || num(o.edge_followed_by) != null || (num(o.media_count) != null && 'biography' in o));
+  }
+  function isComment(o) {
+    const u = o.user || o.owner;
+    return typeof o.text === 'string' && (o.created_at != null || o.created_at_utc != null) &&
+      u && typeof u.username === 'string' && !o.code && !o.shortcode && o.media_type == null;
+  }
+
+  function walk(store, o, ctx, key, media, depth) {
+    if (depth > 80 || o == null || typeof o !== 'object') return;
+    if (Array.isArray(o)) { for (const v of o) walk(store, v, ctx, key, media, depth + 1); return; }
+    let m = media;
+    if (o.instagram_media_id != null && o.creation_time != null) { addTopMedia(store, o, ctx); return; }
+    if (isMedia(o)) m = addMedia(store, o, ctx);
+    else if (isProfile(o)) addProfile(store, o, ctx);
+    else if (key !== 'caption' && key !== 'edge_media_to_caption' && isComment(o)) addComment(store, o, ctx, media);
+    collectInsights(store, o, ctx, m, key);
+    for (const k in o) {
+      const v = o[k];
+      if (v && typeof v === 'object') walk(store, v, ctx, k, m, depth + 1);
+    }
+  }
+
+  function isoDur(s) {
+    const m = /PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?/.exec(s || '');
+    if (!m) return null;
+    const v = (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+    return v > 0 ? v : null;
+  }
+
+  function mergeInto(target, src, newer) {
+    for (const k in src) {
+      const v = src[k];
+      if (v == null || v === '') continue;
+      if (target[k] == null || target[k] === '') target[k] = v;
+      else if (Array.isArray(v)) { if (v.length > target[k].length) target[k] = v; }
+      else if (typeof v === 'string') { if (newer || v.length > target[k].length) target[k] = v; }
+      else if (typeof v === 'number' && newer) target[k] = v;
+      else if (typeof v === 'boolean') target[k] = target[k] || v;
+    }
+  }
+
+  function addMedia(store, o, ctx) {
+    const code = o.code || o.shortcode;
+    const owner = o.user || o.owner || {};
+    let type;
+    const pt = o.product_type, mt = o.media_type, tn = o.__typename;
+    if (pt === 'clips' || pt === 'igtv') type = 'reel';
+    else if (mt === 8 || pt === 'carousel_container' || tn === 'GraphSidecar' || tn === 'XDTGraphSidecar' || (Array.isArray(o.carousel_media) && o.carousel_media.length) || o.edge_sidecar_to_children) type = 'carousel';
+    else if (mt === 2 || o.is_video === true || tn === 'GraphVideo') type = 'reel';
+    else type = 'foto';
+    let caption = '';
+    if (o.caption && typeof o.caption.text === 'string') caption = o.caption.text;
+    else if (typeof o.caption === 'string') caption = o.caption;
+    else { try { caption = o.edge_media_to_caption.edges[0].node.text || ''; } catch (e) {} }
+    const rec = {
+      code, pk: o.pk ? String(o.pk) : (o.id ? String(o.id).split('_')[0] : null),
+      t: num(o.taken_at, o.taken_at_timestamp),
+      type, productType: pt || tn || null,
+      owner: owner.username || null,
+      ownerId: owner.pk ? String(owner.pk) : owner.id ? String(owner.id) : (o.owner_id && o.owner_id.pk ? String(o.owner_id.pk) : null),
+      coauthors: (o.coauthor_producers || []).map(x => x && x.username).filter(Boolean),
+      likes: num(o.like_count, o.edge_media_preview_like, o.edge_liked_by),
+      comments: num(o.comment_count, o.edge_media_to_comment, o.edge_media_to_parent_comment),
+      views: num(o.play_count, o.ig_play_count, o.clips_play_count, o.video_play_count, o.view_count, o.video_view_count),
+      duration: num(o.video_duration) ?? isoDur((/mediaPresentationDuration="([^"]+)"/.exec(o.video_dash_manifest || '') || [])[1]),
+      saves: num(o.save_count, o.saved_count),
+      shares: num(o.share_count, o.reshare_count, o.direct_share_count),
+      reposts: num(o.media_repost_count),
+      caption,
+      pinned: (Array.isArray(o.timeline_pinned_user_ids) && o.timeline_pinned_user_ids.length > 0) || o.is_pinned === true || null,
+      likesHidden: o.like_and_view_counts_disabled === true || null,
+      carouselCount: num(o.carousel_media_count) ?? (Array.isArray(o.carousel_media) ? o.carousel_media.length : null),
+      paidPartnership: o.is_paid_partnership === true || null,
+    };
+    let p = store.posts.get(code);
+    if (!p) { p = { queries: new Set(), _ts: 0 }; store.posts.set(code, p); }
+    const newer = ctx.ts >= p._ts;
+    mergeInto(p, rec, newer);
+    if (newer) p._ts = ctx.ts;
+    p.queries.add(ctx.q.name);
+    ctx.q.posts.add(code);
+    if (rec.pk) store.mediaPkToCode.set(rec.pk, code);
+    return p;
+  }
+
+  function addProfile(store, o, ctx) {
+    const rec = {
+      username: o.username,
+      id: o.pk ? String(o.pk) : o.id ? String(o.id) : null,
+      fullName: o.full_name || '',
+      followers: num(o.follower_count, o.edge_followed_by),
+      following: num(o.following_count, o.edge_follow),
+      mediaCount: num(o.media_count, o.edge_owner_to_timeline_media),
+      bio: typeof o.biography === 'string' ? o.biography : '',
+      category: o.category || o.category_name || o.business_category_name || '',
+      verified: o.is_verified === true || null,
+      isPrivate: o.is_private === true || null,
+      clipsCount: num(o.total_clips_count),
+    };
+    let p = store.profiles.get(o.username);
+    if (!p) { p = { _ts: 0 }; store.profiles.set(o.username, p); }
+    const newer = ctx.ts >= p._ts;
+    mergeInto(p, rec, newer);
+    if (newer) p._ts = ctx.ts;
+    ctx.q.profiles++;
+  }
+
+  function addComment(store, o, ctx, media) {
+    const u = o.user || o.owner;
+    const id = String(o.pk || o.id || (u.username + '|' + (o.created_at || o.created_at_utc) + '|' + o.text.slice(0, 30)));
+    if (store.comments.has(id)) return;
+    let mediaRef = media ? media.code : null;
+    if (!mediaRef) {
+      const mid = o.media_id ? String(o.media_id).split('_')[0] : ctx.mediaHint;
+      mediaRef = mid ? ('pk:' + mid) : null;
+    }
+    store.comments.set(id, {
+      id, user: u.username, text: o.text,
+      t: num(o.created_at, o.created_at_utc),
+      likes: num(o.comment_like_count, o.edge_liked_by),
+      parent: o.parent_comment_id ? String(o.parent_comment_id) : null,
+      media: mediaRef,
+    });
+    ctx.q.comments++;
+  }
+
+  const INSIGHT_KEYS = {
+    reach: 'reach', reach_count: 'reach', accounts_reached: 'reach', reach_total: 'reach',
+    impressions: 'impressions', impression_count: 'impressions', impressions_count: 'impressions', views_count: 'impressions',
+    saves: 'saves', save_count: 'saves', saved_count: 'saves', saved: 'saves',
+    shares: 'shares', share_count: 'shares', shares_count: 'shares',
+    profile_visits: 'profile_visits', profile_visits_count: 'profile_visits', profile_views: 'profile_visits',
+    website_clicks: 'link_clicks', link_clicks: 'link_clicks', bio_link_clicked: 'link_clicks', bio_link_clicks: 'link_clicks', profile_links_taps: 'link_clicks', external_link_taps: 'link_clicks', link_taps: 'link_clicks',
+    accounts_engaged: 'accounts_engaged', total_interactions: 'total_interactions', follows: 'follows', follows_count: 'follows',
+  };
+  function insightNum(v) {
+    if (isNum(v)) return v;
+    if (v && typeof v === 'object') {
+      for (const k of ['value', 'count', 'total', 'total_value', 'metric_value']) {
+        if (isNum(v[k])) return v[k];
+        if (v[k] && typeof v[k] === 'object' && isNum(v[k].value)) return v[k].value;
+      }
+    }
+    return null;
+  }
+  function collectInsights(store, o, ctx, media, key) {
+    let found = 0;
+    for (const k in o) {
+      const norm = INSIGHT_KEYS[k];
+      if (!norm) continue;
+      // 'saved'/'shares' di objek post biasanya boolean atau field lain; hanya ambil angka
+      const v = insightNum(o[k]);
+      if (v == null) continue;
+      if (media && !/insight|metric/i.test(key || '') && (norm === 'saves' || norm === 'shares')) {
+        if (media['ins_' + norm] == null || ctx.ts >= media._ts) media['ins_' + norm] = v;
+      } else if (media) {
+        media['ins_' + norm] = v;
+      } else {
+        const a = store.insights.account;
+        if (a[norm] == null || v > a[norm]) a[norm] = v;
+      }
+      found++;
+    }
+    if (found) ctx.q.insights++;
+    collectAudienceInsights(store, o, ctx, media, key);
+    // jam online audience (best effort)
+    for (const k in o) {
+      if (!/online|active.*hour|hourly/i.test(k)) continue;
+      const hrs = toHours(o[k]);
+      if (hrs) { store.insights.audienceHours = hrs; ctx.q.insights++; }
+    }
+    if (/^(gender|genders|age|ages|age_range|top_cities|top_countries|cities|countries|follower_demographics|audience_[a-z_]+)$/i.test(key || '') && store.insights.audienceRaw.length < 12) {
+      try { store.insights.audienceRaw.push({ key, value: JSON.stringify(o).slice(0, 400) }); } catch (e) {}
+    }
+  }
+  function toHours(v) {
+    if (Array.isArray(v) && v.length === 24 && v.every(x => insightNum(x) != null)) return v.map(insightNum);
+    if (Array.isArray(v) && v.length >= 20 && v.every(x => x && typeof x === 'object')) {
+      const out = new Array(24).fill(0); let ok = 0;
+      for (const x of v) {
+        const h = num(x.hour, x.key, x.label != null ? parseInt(x.label, 10) : null);
+        const val = insightNum(x.value != null ? x.value : x.count);
+        if (h != null && h >= 0 && h < 24 && val != null) { out[h] += val; ok++; }
+      }
+      return ok >= 20 ? out : null;
+    }
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const ks = Object.keys(v).filter(k => /^\d{1,2}$/.test(k));
+      if (ks.length === 24) return Array.from({ length: 24 }, (_, i) => insightNum(v[i]) ?? 0);
+    }
+    return null;
+  }
+
+  // ---------- Text helpers ----------
+  const HASHTAG_RE = /#([\p{L}\p{N}_]+)/gu;
+  const CTA_RE = /(link (di|in) bio|klik|cek (di|link|bio)|check (out|the link)|komen|comment|tulis di kolom|kolom komentar|tag (teman|temen|bestie|sahabat|your|a friend)|\bshare\b|bagikan|\bsave\b|simpan post|follow|ikuti|\bdm\b|direct message|order|pesan sekarang|\bbeli\b|daftar|register|swipe|geser|kunjungi|visit|hubungi|whatsapp|\bwa\b|chat (kami|admin)|reservasi|booking|book now|\bshop\b|\byuk\b|\bayo\b|jangan lupa|coba(in)? sekarang|grab (it|yours))/i;
+  const Q_RE = /\?|^(apa|apakah|gimana|bagaimana|berapa|kapan|dimana|di mana|kok|kenapa|mengapa|siapa|bisa|boleh|ada ga|ada gak)\b|\b(how|what|where|when|why|which|can i|is it|harga(nya)?|pricelist|price)\b/i;
+  const POS_WORDS = ['bagus','keren','mantap','mantul','cantik','suka','enak','lucu','gemes','gemas','love','best','top','recommended','rekomen','worth','puas','terima kasih','makasih','thanks','thank you','amazing','beautiful','great','nice','good','wow','perfect','cakep','ganteng','seru','inspiratif','membantu','helpful','favorit','fav','setuju','sukses','luar biasa','indah','mantab','asik','asyik','kece','juara','the best','congrats','selamat','yummy','delicious','lovely','cute','awesome','pretty','gorgeous','slay','cool','legit','nagih','bangga','proud'];
+  const NEG_WORDS = ['jelek','buruk','kecewa','mahal','lambat','parah','bohong','nipu','penipu','zonk','kurang','benci','hate','bad','worst','terrible','disappointed','scam','fake','ugly','boring','rugi','males','malas','sebel','kesel','kesal','lama banget','gak jelas','ga jelas','nggak jelas','tidak jelas','overprice','overpriced','mengecewakan','basi','hambar','komplain','complain','refund','gak dibales','ga dibales','tidak dibalas','sampah','awful','poor','annoying','sad','sedih'];
+  const NEGATORS = /\b(tidak|tdk|gak|ga|nggak|ngga|enggak|bukan|kurang|not|no|never|don'?t|isn'?t)\s+$/i;
+  const POS_EMO = /[❤️😍🥰🔥👏💯😘🤩✨👍💕💖💗🙌😻🥳😁😊🤤🙏]/u;
+  const NEG_EMO = /[😡😠👎🤮😤💩😒😞😢😭🙄]/u;
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const POS_RE = new RegExp('(^|[^\\p{L}])(' + POS_WORDS.map(esc).join('|') + ')(?=$|[^\\p{L}])', 'giu');
+  const NEG_RE = new RegExp('(^|[^\\p{L}])(' + NEG_WORDS.map(esc).join('|') + ')(?=$|[^\\p{L}])', 'giu');
+  function sentiment(text) {
+    const t = text.toLowerCase();
+    let s = 0, m;
+    POS_RE.lastIndex = 0;
+    while ((m = POS_RE.exec(t))) { const before = t.slice(0, m.index + m[1].length); s += NEGATORS.test(before) ? -1 : 1; }
+    NEG_RE.lastIndex = 0;
+    while ((m = NEG_RE.exec(t))) { const before = t.slice(0, m.index + m[1].length); s += NEGATORS.test(before) && m[2] !== 'kurang' ? 1 : -1; }
+    if (POS_EMO.test(text)) s += 1;
+    if (NEG_EMO.test(text)) s -= 1;
+    return s > 0 ? 'pos' : s < 0 ? 'neg' : 'neu';
+  }
+  function firstSentence(cap) {
+    const line = (cap || '').split(/\n/).map(x => x.trim()).find(Boolean) || '';
+    const m = /^(.+?[.!?])(\s|$)/.exec(line);
+    return (m ? m[1] : line).slice(0, 200);
+  }
+  const jkt = t => { const d = new Date((t + TZ_OFFSET) * 1000); return { dow: (d.getUTCDay() + 6) % 7, hour: d.getUTCHours() }; };
+
+  // ---------- Insights audience (best effort, berbasis nama field) ----------
+  const DIST_LABEL_KEYS = ['label', 'key', 'name', 'dimension_value', 'bucket', 'age_range', 'gender', 'city', 'country', 'title', 'source', 'surface', 'type'];
+  const DIST_VAL_KEYS = ['value', 'count', 'percentage', 'percent', 'share', 'total', 'reach', 'impressions'];
+  function toDist(v) {
+    const out = [];
+    if (Array.isArray(v)) {
+      for (const x of v) {
+        if (!x || typeof x !== 'object') return null;
+        let label = null;
+        if (Array.isArray(x.dimension_values)) label = x.dimension_values.join(' · ');
+        else for (const k of DIST_LABEL_KEYS) if ((typeof x[k] === 'string' && x[k]) || typeof x[k] === 'number' && k === 'key') { label = String(x[k]); break; }
+        let val = null;
+        for (const k of DIST_VAL_KEYS) { val = insightNum(x[k]); if (val != null) break; }
+        if (label == null || val == null) return null;
+        out.push({ label, value: val });
+      }
+    } else if (v && typeof v === 'object') {
+      const keys = Object.keys(v).filter(k => !/^(__typename|id|pk|count|total|name|title|description|period|end_time)$/.test(k));
+      for (const k of keys) { const val = insightNum(v[k]); if (val != null) out.push({ label: k, value: val }); }
+      if (out.length < keys.length * 0.7) return null;
+    }
+    return out.length >= 2 ? out : null;
+  }
+  function distKind(name) {
+    const n = String(name || '').toLowerCase();
+    if (/follow(er)?_?type|follower_vs|non_?follower/.test(n)) return 'follow';
+    if (/gender|sex/.test(n) && /(^|[^a-z])age/.test(n)) return 'ageGender';
+    if (/gender|sex/.test(n)) return 'gender';
+    if (/(^|[^a-z])ages?([^a-z]|$)|age_?(range|group|bucket)/.test(n)) return 'age';
+    if (/cit(y|ies)|kota/.test(n)) return 'city';
+    if (/countr|negara/.test(n)) return 'country';
+    if (/source|surface|traffic|discovery|media_product_type/.test(n)) return 'traffic';
+    return null;
+  }
+  function prettyLabel(kind, label) {
+    const l = String(label).toLowerCase().replace(/_(count|value|reach|impressions|pct|percentage)$/, '');
+    if (kind === 'gender') return /^(f|female|perempuan|wanita|women)$/.test(l) ? 'Perempuan' : /^(m|male|laki-laki|pria|men)$/.test(l) ? 'Laki-laki' : /^(u|unknown)$/.test(l) ? 'Tidak diketahui' : label;
+    if (kind === 'traffic') return ({ explore: 'Explore', home: 'Home feed', feed: 'Home feed', home_feed: 'Home feed', reels: 'Reels tab', reels_tab: 'Reels tab', clips: 'Reels tab', hashtag: 'Hashtag', hashtags: 'Hashtag', profile: 'Profil', search: 'Search', stories: 'Stories', story: 'Stories', other: 'Lainnya', others: 'Lainnya' })[l] || label;
+    return label;
+  }
+  function mergeDist(a, b) {
+    const m = new Map((a || []).map(x => [x.label, x.value]));
+    for (const x of b) m.set(x.label, (m.get(x.label) || 0) + x.value);
+    return [...m.entries()].map(([label, value]) => ({ label, value }));
+  }
+  function addSplit(I, f, nf) {
+    const s = I.followerSplit || { followers: 0, nonFollowers: 0, n: 0 };
+    s.followers += f; s.nonFollowers += nf; s.n++;
+    I.followerSplit = s;
+  }
+  function assignDist(store, name, dist, ctx) {
+    const kind = distKind(name);
+    if (!kind) return;
+    const I = store.insights;
+    if (kind === 'follow') {
+      const f = dist.find(x => /follow/i.test(x.label) && !/non/i.test(x.label)), nf = dist.find(x => /non/i.test(x.label));
+      if (f && nf) addSplit(I, f.value, nf.value);
+    } else if (kind === 'traffic') {
+      I.traffic = mergeDist(I.traffic, dist.map(x => ({ ...x, label: prettyLabel('traffic', x.label) })));
+    } else {
+      if (kind === 'gender') dist = mergeDist([], dist.map(x => ({ ...x, label: prettyLabel('gender', x.label) })));
+      const tot = d => (d || []).reduce((s, x) => s + x.value, 0);
+      if (!I.demo[kind] || tot(dist) > tot(I.demo[kind])) I.demo[kind] = dist;
+    }
+    ctx.q.insights++;
+  }
+  const TRAFFIC_KEY = /^(explore|home|feed|home_feed|reels|reels_tab|clips|hashtag|hashtags|profile|search|stories|story|other|others)(_(count|value|reach|impressions|pct|percentage))?$/i;
+  const DAY_NAMES = [['monday', 'senin', 'mon'], ['tuesday', 'selasa', 'tue'], ['wednesday', 'rabu', 'wed'], ['thursday', 'kamis', 'thu'], ['friday', 'jumat', 'fri'], ['saturday', 'sabtu', 'sat'], ['sunday', 'minggu', 'sun']];
+  function toDays(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    const out = new Array(7).fill(null);
+    for (const k in v) { const i = DAY_NAMES.findIndex(d => d.includes(k.toLowerCase())); if (i >= 0) out[i] = insightNum(v[k]); }
+    return out.filter(x => x != null).length >= 5 ? out.map(x => x ?? 0) : null;
+  }
+  function toSeries(v) {
+    if (!Array.isArray(v) || v.length < 3) return null;
+    const s = v.map(x => insightNum(x) ?? (x && typeof x === 'object' ? insightNum(x.retention ?? x.ratio) : null));
+    return s.every(x => x != null) ? s : null;
+  }
+  // Format Instagram web Insights (business_manager.account_insights_node): { metrik: { results: [{ value, dimension_values }] } }
+  function deepTotal(v) {
+    if (isNum(v)) return v;
+    if (Array.isArray(v)) { for (const x of v) { const r = deepTotal(x); if (r != null) return r; } return null; }
+    if (v && typeof v === 'object') for (const k of ['total_value', 'value', 'results']) if (k in v) { const r = deepTotal(v[k]); if (r != null) return r; }
+    return null;
+  }
+  function parseResultSets(store, o, ctx) {
+    const I = store.insights;
+    let found = 0;
+    for (const k in o) {
+      const rs = o[k] && typeof o[k] === 'object' && Array.isArray(o[k].results) ? o[k].results : null;
+      if (!rs) continue;
+      const val = x => x && typeof x === 'object' ? (insightNum(x.value) ?? insightNum(x.total_value)) : null;
+      const dims = rs.filter(x => x && Array.isArray(x.dimension_values) && x.dimension_values.length);
+      if (!dims.length) { const v = rs.length ? val(rs[0]) : null; if (v != null) { I.metrics[k] = v; found++; } continue; }
+      I.breakdowns[k] = dims.map(x => ({ dims: x.dimension_values.map(String), value: val(x) })).filter(x => x.value != null);
+      found++;
+    }
+    if (found) {
+      ctx.q.insights += found;
+      const v = ctx.vars || {};
+      if (isNum(v.currentPeriodStart) && isNum(v.currentPeriodEnd)) I.period = { start: v.currentPeriodStart, end: v.currentPeriodEnd };
+    }
+  }
+  function addTopMedia(store, o, ctx) {
+    const id = String(o.instagram_media_id);
+    const e = store.insights.topMedia.get(id) || { id, t: num(o.creation_time), ptype: o.instagram_media_product_type || null };
+    for (const k in o) {
+      if (/views_count/i.test(k)) { const v = deepTotal(o[k]); if (v != null) e.views = v; }
+      else if (/interact/i.test(k)) { const v = deepTotal(o[k]); if (v != null) e.interacted = v; }
+      else if (/reach/i.test(k)) { const v = deepTotal(o[k]); if (v != null) e.reach = v; }
+    }
+    store.insights.topMedia.set(id, e);
+    ctx.q.insights++;
+  }
+  function tzOffsetHours(tz, ms) {
+    try {
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(new Date(ms)).map(x => [x.type, x.value]));
+      return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - ms) / 3600000);
+    } catch (e) { return -8; }
+  }
+  const FOLLOW_TYPE = { '0': 'Tidak diketahui', '1': 'Followers', '2': 'Non-followers' };
+  const MEDIA_PT = { '1': 'Live', '2': 'Post (foto/carousel)', '3': 'Stories', '5': 'Video', '16': 'Reels' };
+  const DAY_ABBR = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 5, sun: 6 };
+  const METRIC_LABEL = {
+    views_current_period: 'Views', reach_current_period: 'Accounts reached', viewers_current_period: 'Akun yang menonton (viewers)',
+    fb_views_current_period: 'Views dari Facebook (crosspost)', total_interactions: 'Total interaksi', engaged_accounts: 'Accounts engaged',
+    profile_visits_count: 'Profile visits', bio_link_clicks: 'Klik link di bio', contact_button_clicks: 'Klik tombol kontak',
+  };
+
+  function collectAudienceInsights(store, o, ctx, media, key) {
+    const I = store.insights;
+    parseResultSets(store, o, ctx);
+    if (Array.isArray(o.breakdowns)) for (const b of o.breakdowns) {
+      if (!b || !Array.isArray(b.results)) continue;
+      const dist = toDist(b.results);
+      if (dist) assignDist(store, (b.dimension_keys || []).join('_') + '_' + (o.name || key || ''), dist, ctx);
+    }
+    const keys = Object.keys(o);
+    for (const k of keys) {
+      const v = o[k];
+      if (v && typeof v === 'object' && distKind(k)) { const dist = toDist(v); if (dist) assignDist(store, k, dist, ctx); }
+      if (/online|active/i.test(k)) { const d = toDays(v); if (d) { I.audienceDays = d; ctx.q.insights++; } }
+      const setM = (name, val) => { if (val == null) return; if (media) media['ins_' + name] = val; else I.account[name] = val; ctx.q.insights++; };
+      if (/^(avg|average)_?(watch|view)_?(time|duration)|^ig_reels_avg_watch_time$|^avg_time_watched$/i.test(k)) setM('avgWatch', insightNum(v));
+      else if (/^total_?(watch|view)_?time|^ig_reels_video_view_total_time$|^total_time_watched$/i.test(k)) setM('totalWatch', insightNum(v));
+      else if (/retention/i.test(k)) setM('retention', toSeries(v));
+    }
+    const nfKey = keys.find(k => /non_?follower/i.test(k) && insightNum(o[k]) != null);
+    if (nfKey && distKind(key) !== 'follow') {
+      const fKey = keys.find(k => /follower/i.test(k) && !/non|count/i.test(k) && insightNum(o[k]) != null);
+      if (fKey) { addSplit(I, insightNum(o[fKey]), insightNum(o[nfKey])); ctx.q.insights++; }
+    }
+    const trKeys = keys.filter(k => TRAFFIC_KEY.test(k) && insightNum(o[k]) != null);
+    if (trKeys.length >= 3 && distKind(key) !== 'traffic') { I.traffic = mergeDist(I.traffic, trKeys.map(k => ({ label: prettyLabel('traffic', k), value: insightNum(o[k]) }))); ctx.q.insights++; }
+  }
+
+  // ---------- Klasifikasi komentar & konten ----------
+  const COMMENT_TYPES = { question: 'Pertanyaan', tag: 'Tag teman', emoji: 'Emoji saja', diskusi: 'Diskusi / opini', singkat: 'Reaksi singkat' };
+  function classifyComment(c, account) {
+    const t = (c.text || '').trim();
+    if (!/[\p{L}\p{N}]/u.test(t)) return 'emoji';
+    const mentions = (t.match(/@[\w.]+/g) || []).filter(m => m.slice(1).toLowerCase() !== String(account || '').toLowerCase());
+    if (mentions.length && !c.parent) return 'tag';
+    if (Q_RE.test(t)) return 'question';
+    if ((t.match(/\p{L}+/gu) || []).length >= 6) return 'diskusi';
+    return 'singkat';
+  }
+  const ID_WORDS = new Set('yang dan di ke ini itu aku kamu gak ga nggak ngga engga enggak banget bgt aja sih dong kak kakak kok juga ada mau sama udah sudah bisa lagi enak bagus keren mantap mantul makasih terima kasih apa berapa gimana kapan buat untuk dari tapi jadi kalo kalau deh nih ya yg dgn dengan min sis gan wkwk wkwkwk hehe lucu cantik semoga sukses selalu sehat tempatnya harganya dimana mana cobain pengen pingin suka sekali lho loh tuh kan cuma emang beneran kenapa siapa jualan beli harga'.split(' '));
+  const EN_WORDS = new Set('the and is are you your i my this that it so very love nice good great amazing beautiful what how where when with for of to in on wow omg lol thanks thank please can cute best looks look delicious awesome want need just like really yes be was were have has these those they we our'.split(' '));
+  function detectLang(text) {
+    if (/[\p{Script=Han}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Thai}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Cyrillic}]/u.test(text)) return 'Bahasa lain';
+    const words = (text.toLowerCase().replace(/@[\w.]+/g, ' ').match(/\p{L}+/gu) || []);
+    let id = 0, en = 0;
+    for (const w of words) { if (ID_WORDS.has(w)) id++; if (EN_WORDS.has(w)) en++; }
+    if (!id && !en) return words.length ? 'Tidak terdeteksi' : 'Emoji/simbol';
+    if (id && en && Math.min(id, en) / Math.max(id, en) >= 0.5) return 'Campuran ID–EN';
+    return id >= en ? 'Indonesia' : 'Inggris';
+  }
+  const PILLARS = [
+    ['promo', 'Promo & penawaran', /promo|diskon|discount|\bsale\b|gratis|\bfree\b|voucher|cashback|bundling|\bharga\b|\bprice\b|murah|\d+\s?% ?off|buy 1|beli 1|giveaway/i],
+    ['produk', 'Produk / menu', /\bmenu\b|produk|product|new arrival|launch|varian|\brasa\b|flavou?r|koleksi|collection|ready stock|best ?seller|signature/i],
+    ['edukasi', 'Edukasi & tips', /\btips?\b|\bcara\b|how to|tutorial|resep|recipe|panduan|guide|fakta|tahukah|did you know|belajar|\bstep\b|rekomendasi/i],
+    ['review', 'Review & testimoni', /review|testimoni|ulasan|kata mereka|pelanggan|customer|unboxing|cobain|nyobain|first impression|jujur/i],
+    ['kuliner', 'Kuliner & makanan', /makan|kuliner|\bfood|kopi|coffee|resto|\bcafe|jajan|mukbang|masak|cooking|dessert|minuman|sarapan|breakfast|lunch|dinner|foodie/i],
+    ['lifestyle', 'Lifestyle & keseharian', /daily|sehari|vlog|routine|rutinitas|weekend|day in|keseharian|\blife\b|grwm|get ready/i],
+    ['humor', 'Humor & hiburan', /wkwk|haha|lucu|kocak|ngakak|prank|meme|funny|\blol\b|sketsa|komedi/i],
+    ['trend', 'Trend & challenge', /challenge|\btrend|viral|\bfyp\b|\bpov\b|transition|sound/i],
+    ['keluarga', 'Keluarga & relationship', /family|keluarga|\banak\b|mama|papa|\bibu\b|ayah|suami|istri|pacar|couple|\bbaby\b|parenting|mertua|adik|kakak/i],
+    ['beauty', 'Beauty & fashion', /skincare|make ?up|beauty|outfit|fashion|ootd|glow|serum|lipsti|hijab|style/i],
+    ['travel', 'Travel & tempat', /travel|liburan|\btrip\b|staycation|jalan-jalan|hotel|pantai|explore|hidden gem|lokasi|tempat baru|spot/i],
+    ['event', 'Event & momen', /\bevent|acara|grand opening|opening|launching|anniversary|lebaran|ramadan|natal|christmas|imlek|merdeka|halloween|valentine/i],
+    ['bts', 'Behind the scenes', /behind the scene|\bbts\b|proses|process|dapur|kitchen|persiapan|making of/i],
+    ['collab', 'Kolaborasi & endorse', /#ad\b|#endorse|paid partnership|sponsored|endorse|bekerja sama|in collaboration/i],
+  ];
+  const PILLAR_LABEL = Object.fromEntries(PILLARS.map(([k, l]) => [k, l]));
+  PILLAR_LABEL.lainnya = 'Lainnya / tidak terklasifikasi';
+  function pillarsOf(text) { return PILLARS.filter(([, , re]) => re.test(text)).map(([k]) => k); }
+  const STOP = new Set([...ID_WORDS, ...EN_WORDS, 'nya', 'aja', 'kak', 'kakk', 'min', 'admin', 'udh', 'blm', 'tdk', 'sdh', 'gk', 'gw', 'gue', 'lu', 'lo', 'km', 'aq', 'jg', 'utk', 'tp', 'krn', 'trs', 'klo', 'kalo', 'emg', 'bener', 'bnr']);
+
+  function audienceOf(store, account, posts, audComments, ownComments, F, score) {
+    const I = store.insights;
+    const sum = a => a.reduce((s, x) => s + x, 0);
+    const sumOf = f => { const v = vals(posts, f); return v.length ? sum(v) : null; };
+    // ---------- A. Insights ----------
+    const byCodeAll = new Map(posts.map(p => [p.code, p]));
+    const watch = vals(posts, p => p.avgWatch);
+    const retPost = posts.find(p => Array.isArray(p.retention));
+    const M = I.metrics, BD = I.breakdowns;
+    const metric = re => { const k = Object.keys(M).find(x => re.test(x)); return k ? M[k] : null; };
+    const bdKey = re => Object.keys(BD).find(k => re.test(k));
+    const splitOf = k => {
+      if (!k) return null;
+      const g = d => BD[k].filter(x => x.dims[0] === d).reduce((s, x) => s + x.value, 0);
+      const f = g('1'), nf = g('2');
+      return f || nf ? { followers: f, nonFollowers: nf, unknown: g('0') } : null;
+    };
+    const viewsSplit = splitOf(bdKey(/(views|reach).*follow_type$/));
+    const interSplit = splitOf(bdKey(/interact.*follow_type$/));
+    const fm = new Map();
+    const fmEntry = code => { const label = MEDIA_PT[code] || `Lainnya (kode ${code})`; const e = fm.get(label) || { label, views: null, f: 0, nf: 0, inter: null }; fm.set(label, e); return e; };
+    const mfK = bdKey(/media_and_follow/);
+    if (mfK) for (const x of BD[mfK]) { const e = fmEntry(x.dims[0]); e.views = (e.views || 0) + x.value; if (x.dims[1] === '1') e.f += x.value; if (x.dims[1] === '2') e.nf += x.value; }
+    const imK = bdKey(/interactions_by_media_type/);
+    if (imK) for (const x of BD[imK]) { const e = fmEntry(x.dims[0]); e.inter = (e.inter || 0) + x.value; }
+    const formatIns = [...fm.values()].sort((a, b) => (b.views || 0) - (a.views || 0) || (b.inter || 0) - (a.inter || 0));
+    // jam aktif followers: bucket 3 jam dalam waktu Pacific (PT) → dikonversi ke WIB
+    let activeGrid = null, tzShift = null;
+    const hK = bdKey(/hourly|online_followers/);
+    if (hK) {
+      tzShift = 7 - tzOffsetHours('America/Los_Angeles', store.captureTs || Date.now());
+      activeGrid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+      for (const x of BD[hK]) {
+        const d = DAY_ABBR[String(x.dims[0]).slice(0, 3).toLowerCase()];
+        const mm = /^(\d+)-(\d+)$/.exec(x.dims[1] || '');
+        if (d == null || !mm) continue;
+        for (let h = +mm[1]; h <= +mm[2]; h++) {
+          const abs = ((d * 24 + h + tzShift) % 168 + 168) % 168;
+          activeGrid[Math.floor(abs / 24)][abs % 24] = x.value;
+        }
+      }
+    }
+    // demografi dari breakdown 1 dimensi
+    for (const k in BD) {
+      const kind = distKind(k);
+      if (!kind || kind === 'follow' || kind === 'traffic' || BD[k].some(x => x.dims.length !== 1)) continue;
+      let dist = BD[k].map(x => ({ label: kind === 'gender' ? prettyLabel('gender', x.dims[0]) : x.dims[0], value: x.value }));
+      if (!I.demo[kind]) I.demo[kind] = mergeDist([], dist);
+    }
+    const overview = Object.keys(M).filter(k => k !== 'ccp_views_current_period').map(k => ({ key: k, label: METRIC_LABEL[k] || k, value: M[k] }));
+    const topMedia = [...I.topMedia.values()].map(e => {
+      const code = store.mediaPkToCode.get(e.id) || null;
+      const p = code ? byCodeAll.get(code) : null;
+      return { ...e, code, url: p ? p.url : null, caption: p ? p.caption.slice(0, 80) : '', type: p ? p.type : null };
+    }).sort((a, b) => (b.views || 0) - (a.views || 0) || (b.interacted || 0) - (a.interacted || 0));
+    const ins = {
+      demo: I.demo, period: I.period, overview, viewsSplit, interSplit, formatIns, activeGrid, tzShift, topMedia,
+      followerSplit: I.followerSplit || viewsSplit,
+      traffic: I.traffic,
+      avgWatch: watch.length ? mean(watch) : (isNum(I.account.avgWatch) ? (I.account.avgWatch > 600 ? I.account.avgWatch / 1000 : I.account.avgWatch) : null),
+      watchN: watch.length,
+      watchByPost: posts.filter(p => p.avgWatch != null).map(p => ({ code: p.code, url: p.url, t: p.t, avgWatch: p.avgWatch, duration: p.duration })).slice(0, 20),
+      retention: I.account.retention || (retPost ? retPost.retention : null),
+      profileVisits: metric(/^profile_visits/) ?? I.account.profile_visits ?? sumOf(p => p.profileVisits),
+      follows: metric(/follows/) ?? I.account.follows ?? sumOf(p => p.follows),
+      linkClicks: metric(/link_clicks|website_clicks/) ?? I.account.link_clicks ?? sumOf(p => p.linkClicks),
+      hours: activeGrid ? Array.from({ length: 24 }, (_, h) => activeGrid.reduce((s, r) => s + r[h], 0) / 7) : I.audienceHours,
+      days: activeGrid ? activeGrid.map(r => r.reduce((s, x) => s + x, 0) / 24) : I.audienceDays,
+    };
+    ins.hasDemo = ['gender', 'age', 'city', 'country', 'ageGender'].some(k => I.demo[k]);
+    ins.any = overview.length > 0 || !!interSplit || formatIns.length > 0 || topMedia.length > 0 || ins.hasDemo || !!ins.followerSplit || !!ins.traffic || ins.avgWatch != null || !!ins.retention ||
+      ins.profileVisits != null || ins.follows != null || ins.linkClicks != null || !!ins.hours || !!ins.days;
+
+    // ---------- B. Data publik ----------
+    const byCode = new Map(posts.map(p => [p.code, p]));
+    const rows = audComments.map(c => {
+      const p = c.code ? byCode.get(c.code) : null;
+      const delay = p && isNum(c.t) && c.t >= p.t ? c.t - p.t : null;
+      return { ...c, type: classifyComment(c, account), lang: detectLang(c.text), sent: sentiment(c.text), delay, postType: p ? p.type : null, postUrl: p ? p.url : null };
+    }).sort((a, b) => (b.t || 0) - (a.t || 0));
+    const n = rows.length;
+    const countBy = (arr, f) => { const m = new Map(); for (const x of arr) { const k = f(x); m.set(k, (m.get(k) || 0) + 1); } return [...m.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value); };
+
+    // jam & hari aktif (estimasi)
+    const heat = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    for (const c of rows) if (isNum(c.t)) { const { dow, hour } = jkt(c.t); heat[dow][hour]++; }
+    const dayTotals = heat.map(r => sum(r));
+    const hourTotals = Array.from({ length: 24 }, (_, h) => sum(heat.map(r => r[h])));
+    const blocks = Array.from({ length: 8 }, (_, b) => ({ b, n: hourTotals.slice(b * 3, b * 3 + 3).reduce((s, x) => s + x, 0) })).sort((x, y) => y.n - x.n);
+    const slots = [];
+    heat.forEach((r, d) => r.forEach((v, h) => { if (v) slots.push({ dow: d, hour: h, n: v }); }));
+    slots.sort((a, b) => b.n - a.n);
+
+    // kecepatan respon
+    const delays = rows.map(c => c.delay).filter(isNum);
+    const B = [['< 1 jam', 3600], ['1–6 jam', 6 * 3600], ['6–24 jam', 86400], ['1–3 hari', 3 * 86400], ['> 3 hari', Infinity]];
+    const speedBuckets = B.map(([label], i) => ({ label, value: delays.filter(d => d >= (i ? B[i - 1][1] : 0) && d < B[i][1]).length }));
+    const firstByPost = new Map();
+    for (const c of rows) if (isNum(c.delay)) firstByPost.set(c.code, Math.min(firstByPost.get(c.code) ?? Infinity, c.delay));
+    const speed = delays.length ? {
+      n: delays.length, median: median(delays), within1h: delays.filter(d => d < 3600).length / delays.length * 100,
+      within24h: delays.filter(d => d < 86400).length / delays.length * 100, buckets: speedBuckets,
+      firstMedian: firstByPost.size ? median([...firstByPost.values()]) : null, postsWithComments: firstByPost.size,
+    } : null;
+
+    // rasio interaksi
+    const tl = sumOf(p => p.likes) || 0, tc = sumOf(p => p.comments) || 0, ts = sumOf(p => p.saves), tsh = sumOf(p => p.shares), trp = sumOf(p => p.reposts);
+    const ratio = { likes: tl, comments: tc, saves: ts, shares: tsh, reposts: trp, per100: { comments: tl ? tc / tl * 100 : null, saves: tl && ts != null ? ts / tl * 100 : null, shares: tl && tsh != null ? tsh / tl * 100 : null, reposts: tl && trp != null ? trp / tl * 100 : null } };
+
+    // jenis, sentimen, bahasa
+    const typeEx = {};
+    for (const c of rows) { (typeEx[c.type] = typeEx[c.type] || []); const x = c.text.slice(0, 90); if (typeEx[c.type].length < 2 && c.text.length > 2 && !typeEx[c.type].includes(x)) typeEx[c.type].push(x); }
+    const types = Object.keys(COMMENT_TYPES).map(k => ({ key: k, label: COMMENT_TYPES[k], value: rows.filter(c => c.type === k).length, ex: typeEx[k] || [] }));
+    const sent = { pos: rows.filter(c => c.sent === 'pos').length, neu: rows.filter(c => c.sent === 'neu').length, neg: rows.filter(c => c.sent === 'neg').length };
+    const exOf = k => [...new Set(rows.filter(c => c.sent === k && c.text.length > 6).map(c => c.text.slice(0, 120)))].slice(0, 3);
+    const sentEx = { pos: exOf('pos'), neg: exOf('neg') };
+    const langs = countBy(rows, c => c.lang);
+    const langKnown = langs.filter(l => !/Tidak terdeteksi|Emoji/.test(l.label));
+
+    // format favorit
+    const formats = TYPES.map(t => {
+      const g = posts.filter(p => p.type === t);
+      const cs = rows.filter(c => c.postType === t);
+      const gl = sum(g.map(p => p.likes || 0)), gc = sum(g.map(p => p.comments || 0));
+      return { type: t, n: g.length, medScore: median(g.map(score)), avgLikes: mean(vals(g, p => p.likes)), avgComments: mean(vals(g, p => p.comments)), avgViews: mean(vals(g, p => p.views)), c100: gl ? gc / gl * 100 : null, read: cs.length, posPct: cs.length ? cs.filter(c => c.sent === 'pos').length / cs.length * 100 : null };
+    }).filter(f => f.n);
+    const fmtOk = formats.filter(f => f.n >= 2);
+    const favFormat = [...(fmtOk.length ? fmtOk : formats)].sort((a, b) => b.medScore - a.medScore)[0] || null;
+    const talkFormat = [...(fmtOk.length ? fmtOk : formats)].filter(f => f.c100 != null).sort((a, b) => b.c100 - a.c100)[0] || null;
+
+    // topik / pillar
+    const pm = new Map();
+    for (const p of posts) for (const k of (p.pillars.length ? p.pillars : ['lainnya'])) { const g = pm.get(k) || []; g.push(p); pm.set(k, g); }
+    const pillars = [...pm.entries()].map(([k, g]) => {
+      const codes = new Set(g.map(p => p.code));
+      const cs = rows.filter(c => codes.has(c.code));
+      const gl = sum(g.map(p => p.likes || 0)), gc = sum(g.map(p => p.comments || 0));
+      return { key: k, label: PILLAR_LABEL[k], n: g.length, share: g.length / posts.length * 100, medScore: median(g.map(score)), avgComments: mean(vals(g, p => p.comments)), c100: gl ? gc / gl * 100 : null, read: cs.length, posPct: cs.length ? cs.filter(c => c.sent === 'pos').length / cs.length * 100 : null };
+    });
+    const minP = posts.length >= 20 ? 3 : 2;
+    pillars.sort((a, b) => (b.n >= minP) - (a.n >= minP) || b.medScore - a.medScore);
+
+    // audience loyal
+    const cm = new Map();
+    for (const c of rows) {
+      const e = cm.get(c.user) || { user: c.user, n: 0, posts: new Set(), first: Infinity, last: 0, pos: 0, neg: 0, q: 0 };
+      e.n++; if (c.code) e.posts.add(c.code);
+      if (isNum(c.t)) { e.first = Math.min(e.first, c.t); e.last = Math.max(e.last, c.t); }
+      if (c.sent === 'pos') e.pos++; if (c.sent === 'neg') e.neg++; if (c.type === 'question') e.q++;
+      cm.set(c.user, e);
+    }
+    const postsWithRead = new Set(rows.map(c => c.code).filter(Boolean)).size;
+    const isRepeat = e => postsWithRead >= 2 ? e.posts.size >= 2 : e.n >= 2;
+    const commenters = [...cm.values()].map(e => ({ user: e.user, n: e.n, posts: e.posts.size, first: isFinite(e.first) ? e.first : null, last: e.last || null, pos: e.pos, neg: e.neg, q: e.q, repeat: isRepeat(e) }))
+      .sort((a, b) => b.posts - a.posts || b.n - a.n);
+    const repeaters = commenters.filter(e => e.repeat);
+    const loyal = {
+      unique: commenters.length, repeat: repeaters.length,
+      repeatPct: commenters.length ? repeaters.length / commenters.length * 100 : null,
+      commentsFromRepeatPct: n ? sum(repeaters.map(e => e.n)) / n * 100 : null,
+      rule: postsWithRead >= 2 ? 'berkomentar di 2+ post berbeda' : 'berkomentar 2+ kali (komentar baru terbaca dari 1 post)',
+      postsWithRead,
+    };
+
+    // estimasi interest
+    const themeCount = new Map();
+    for (const c of rows) for (const k of pillarsOf(c.text)) themeCount.set(k, (themeCount.get(k) || 0) + 1);
+    const wordCount = new Map(), emojiCount = new Map();
+    for (const c of rows) {
+      for (const w of new Set((c.text.toLowerCase().replace(/@[\w.]+/g, ' ').match(/\p{L}{3,}/gu) || []))) if (!STOP.has(w)) wordCount.set(w, (wordCount.get(w) || 0) + 1);
+      for (const e of (c.text.match(/\p{Extended_Pictographic}/gu) || [])) emojiCount.set(e, (emojiCount.get(e) || 0) + 1);
+    }
+    const top = (m, k) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, k).map(([label, value]) => ({ label, value }));
+    const tagMap = new Map();
+    for (const p of posts) for (const h of new Set(p.hashtags)) { const g = tagMap.get(h) || []; g.push(score(p)); tagMap.set(h, g); }
+    const interest = {
+      topics: pillars.filter(p => p.key !== 'lainnya' && p.n >= minP).slice(0, 3),
+      commentThemes: top(themeCount, 5).map(x => ({ ...x, label: PILLAR_LABEL[x.label] })),
+      words: top(wordCount, 15).filter(x => x.value >= 2),
+      emojis: top(emojiCount, 10),
+      hashtags: [...tagMap.entries()].filter(([, a]) => a.length >= 2).map(([tag, a]) => ({ tag, n: a.length, med: median(a) })).sort((a, b) => b.med - a.med).slice(0, 8),
+    };
+
+    const pub = {
+      n, totalComments: tc, heat, dayTotals, hourTotals, blocks, slots: slots.slice(0, 5), speed, ratio,
+      types, sent, sentEx, langs, langKnown, formats, favFormat, talkFormat, pillars, commenters, loyal, interest,
+      ownReplies: ownComments.length, replyPerAud: n ? ownComments.length / n * 100 : null,
+      rows,
+    };
+    return { ins, pub, conclusions: audienceConclusions(ins, pub, F) };
+  }
+
+  function audienceConclusions(ins, pub, F) {
+    const out = [];
+    const pct = (v, tot) => tot ? Math.round(v / tot * 100) : 0;
+    const topOf = d => d && d.length ? [...d].sort((a, b) => b.value - a.value)[0] : null;
+    const totOf = d => (d || []).reduce((s, x) => s + x.value, 0);
+    const sc = v => F ? f2(v) + '%' : f0(v) + ' interaksi';
+    // 1. siapa audiensnya
+    if (ins.hasDemo) {
+      const parts = [];
+      for (const [k, lab] of [['gender', ''], ['age', 'usia '], ['city', 'dari '], ['country', 'negara ']]) {
+        const d = ins.demo[k], t = topOf(d);
+        if (t) parts.push(`${lab}<b>${t.label}</b> (${pct(t.value, totOf(d))}%)`);
+      }
+      out.push({ src: 'ins', t: `Audiens utama: ${parts.join(', ')}.` });
+    } else if (pub.langKnown.length && pub.n >= 10) {
+      const l = pub.langKnown[0], tot = totOf(pub.langKnown);
+      out.push({ src: 'pub', t: `Audiens yang aktif berkomentar mayoritas memakai <b>${l.label === 'Indonesia' ? 'Bahasa Indonesia' : l.label}</b> (${pct(l.value, tot)}% komentar yang bahasanya terdeteksi) — kemungkinan besar audiens lokal.` });
+    }
+    if (ins.followerSplit) {
+      const s = ins.viewsSplit || ins.followerSplit, nfp = pct(s.nonFollowers, s.followers + s.nonFollowers);
+      out.push({ src: 'ins', t: `<b>${nfp}%</b> yang melihat konten adalah <b>non-followers</b> — ${nfp >= 50 ? 'konten banyak menjangkau orang baru' : 'konten masih lebih banyak dikonsumsi followers sendiri'}.` });
+    }
+    // 2. format favorit
+    if (pub.favFormat) {
+      const others = pub.formats.filter(f => f !== pub.favFormat && f.n >= 2).map(f => `${TYPE_LABEL[f.type]} ${sc(f.medScore)}`);
+      out.push({ src: 'pub', t: `Format favorit audiens: <b>${TYPE_LABEL[pub.favFormat.type]}</b> (median ${F ? 'ER ' : ''}${sc(pub.favFormat.medScore)}${others.length ? ' vs ' + others.join(', ') : ''}).${pub.talkFormat && pub.talkFormat.type !== pub.favFormat.type ? ` Tapi yang paling memancing komentar justru <b>${TYPE_LABEL[pub.talkFormat.type]}</b>.` : ''}` });
+    }
+    // 3. topik
+    if (pub.interest.topics.length) {
+      const t = pub.interest.topics;
+      out.push({ src: 'pub', t: `Topik yang paling direspon: <b>${t.map(x => x.label).join('</b>, <b>')}</b> (median ${t.map(x => sc(x.medScore)).join(' / ')}). <i>Estimasi dari caption & hashtag.</i>` });
+    }
+    // 4. kapan aktif
+    if (ins.hours) {
+      let b = 0, bv = -1;
+      for (let i = 0; i < 24; i++) { const v = ins.hours[i] + ins.hours[(i + 1) % 24] + ins.hours[(i + 2) % 24]; if (v > bv) { bv = v; b = i; } }
+      out.push({ src: 'ins', t: `Followers paling banyak online sekitar <b>${String(b).padStart(2, '0')}.00–${String((b + 3) % 24).padStart(2, '0')}.00${ins.activeGrid ? ' WIB' : ''}</b>${ins.days ? `, hari paling ramai <b>${DAYS[ins.days.indexOf(Math.max(...ins.days))]}</b>` : ''}.` });
+    } else if (pub.n >= 10 && pub.blocks[0].n) {
+      const b = pub.blocks[0].b, d = pub.dayTotals.indexOf(Math.max(...pub.dayTotals));
+      out.push({ src: 'pub', t: `Audiens paling aktif berkomentar hari <b>${DAYS[d]}</b> sekitar <b>${String(b * 3).padStart(2, '0')}.00–${String(b * 3 + 3).padStart(2, '0')}.00 WIB</b>.` });
+    }
+    // 5. cara berinteraksi
+    if (pub.n >= 10) {
+      const t = [...pub.types].sort((a, b) => b.value - a.value)[0];
+      const tot = pub.sent.pos + pub.sent.neu + pub.sent.neg;
+      out.push({ src: 'pub', t: `Cara mereka berinteraksi: paling banyak <b>${t.label.toLowerCase()}</b> (${pct(t.value, pub.n)}%), ${pct(pub.sent.pos, tot)}% komentar bernada positif${pub.loyal.commentsFromRepeatPct != null ? `, dan ${Math.round(pub.loyal.commentsFromRepeatPct)}% komentar datang dari audiens loyal` : ''}.` });
+    } else if (pub.ratio.per100.comments != null) {
+      const c = pub.ratio.per100.comments;
+      out.push({ src: 'pub', t: `Audiens lebih suka <b>${c < 2 ? 'menekan like daripada berkomentar' : 'ikut berkomentar'}</b>: ${f1(c)} komentar per 100 likes.` });
+    }
+    return out.slice(0, 5);
+  }
+
+  // ---------- Benchmark ----------
+  function tierOf(F) {
+    if (!isNum(F)) return null;
+    if (F < 10000) return { name: 'Nano (<10rb followers)', t: [1, 3, 6] };
+    if (F < 100000) return { name: 'Mikro (10rb–100rb)', t: [0.8, 2, 4] };
+    if (F < 1000000) return { name: 'Menengah (100rb–1jt)', t: [0.5, 1.5, 3] };
+    return { name: 'Makro (>1jt)', t: [0.3, 1, 2] };
+  }
+  function erLabel(er, tier) {
+    if (!isNum(er) || !tier) return null;
+    const [a, b, c] = tier.t;
+    if (er < a) return { key: 'low', text: 'Rendah' };
+    if (er < b) return { key: 'avg', text: 'Rata-rata' };
+    if (er < c) return { key: 'good', text: 'Bagus' };
+    return { key: 'great', text: 'Sangat bagus' };
+  }
+
+  // ---------- Analysis ----------
+  function accountsIn(store) {
+    const counts = new Map();
+    for (const p of store.posts.values()) {
+      for (const u of [p.owner, ...(p.coauthors || [])]) if (u) counts.set(u, (counts.get(u) || 0) + 1);
+    }
+    const list = [...store.profiles.values()].filter(p => p.followers != null)
+      .map(p => ({ username: p.username, posts: counts.get(p.username) || 0, followers: p.followers }))
+      .sort((a, b) => b.posts - a.posts || b.followers - a.followers);
+    if (!list.length) {
+      const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top) list.push({ username: top[0], posts: top[1], followers: null });
+    }
+    return list;
+  }
+
+  function analyze(store, account, snapshots) {
+    const prof = store.profiles.get(account) || { username: account };
+    const F = isNum(prof.followers) ? prof.followers : null;
+    const all = [...store.posts.values()];
+    const mine = all.filter(p => p.owner === account || (p.coauthors || []).includes(account) || (prof.id && p.ownerId === prof.id));
+    const excluded = all.length - mine.length;
+
+    const posts = mine.filter(p => isNum(p.t)).map(p => {
+      const saves = p.ins_saves ?? p.saves, shares = p.ins_shares ?? p.shares;
+      const eng = (p.likes || 0) + (p.comments || 0) + (saves || 0) + (shares || 0);
+      const reach = p.ins_reach ?? null;
+      const { dow, hour } = jkt(p.t);
+      const cap = p.caption || '';
+      const hashtags = [...cap.matchAll(HASHTAG_RE)].map(m => m[1].toLowerCase());
+      const hook = firstSentence(cap);
+      return {
+        code: p.code, url: `https://www.instagram.com/${p.type === 'reel' ? 'reel' : 'p'}/${p.code}/`,
+        t: p.t, dow, hour, type: p.type, owner: p.owner, collab: p.owner !== account || (p.coauthors || []).length > 0,
+        coauthors: p.coauthors || [], pinned: !!p.pinned, likesHidden: !!p.likesHidden,
+        likes: p.likes, comments: p.comments, views: p.views, duration: p.duration,
+        saves: saves ?? null, shares: shares ?? null, reposts: p.reposts ?? null,
+        reach, impressions: p.ins_impressions ?? null, profileVisits: p.ins_profile_visits ?? null,
+        eng, er: F ? eng / F * 100 : null, erReach: reach ? eng / reach * 100 : null,
+        caption: cap, capLen: [...cap].length, hashtags, cta: CTA_RE.test(cap), hook,
+        hookQ: /\?/.test(hook), hookNum: /\d/.test(hook), carouselCount: p.carouselCount ?? null,
+        queries: [...p.queries],
+        avgWatch: isNum(p.ins_avgWatch) ? (p.ins_avgWatch > 600 ? p.ins_avgWatch / 1000 : p.ins_avgWatch) : null,
+        totalWatch: p.ins_totalWatch ?? null, retention: p.ins_retention ?? null,
+        follows: p.ins_follows ?? null, linkClicks: p.ins_link_clicks ?? null,
+      };
+    }).sort((a, b) => b.t - a.t);
+    for (const p of posts) { p.pillars = pillarsOf(p.caption + ' ' + p.hashtags.map(h => '#' + h).join(' ')); if (p.collab && !p.pillars.includes('collab')) p.pillars.push('collab'); }
+
+    const score = p => p.er ?? p.eng;
+    const tier = tierOf(F);
+    const nonPinned = posts.filter(p => !p.pinned);
+    const tsSorted = nonPinned.map(p => p.t).sort((a, b) => a - b);
+    const spanDays = tsSorted.length > 1 ? (tsSorted[tsSorted.length - 1] - tsSorted[0]) / 86400 : 0;
+    const capTs = store.captureTs ? store.captureTs / 1000 : (tsSorted[tsSorted.length - 1] || 0);
+    const solo = posts.filter(p => !p.collab), collabs = posts.filter(p => p.collab);
+    const summary = {
+      n: posts.length, pinned: posts.length - nonPinned.length,
+      avgER: mean(vals(posts, p => p.er)), medER: median(vals(posts, p => p.er)),
+      avgERReach: mean(vals(posts, p => p.erReach)),
+      nSolo: solo.length, nCollab: collabs.length,
+      avgERSolo: mean(vals(solo, p => p.er)), medERSolo: median(vals(solo, p => p.er)),
+      avgERCollab: mean(vals(collabs, p => p.er)), medERCollab: median(vals(collabs, p => p.er)),
+      avgEngSolo: mean(solo.map(p => p.eng)), avgEngCollab: mean(collabs.map(p => p.eng)),
+      avgLikes: mean(vals(posts, p => p.likes)), avgComments: mean(vals(posts, p => p.comments)),
+      avgViews: mean(vals(posts, p => p.views)), viewsN: vals(posts, p => p.views).length,
+      avgEng: mean(posts.map(p => p.eng)),
+      freqWeek: freqOf(nonPinned, capTs),
+      last30: nonPinned.filter(p => p.t >= capTs - 30 * 86400).length,
+      from: tsSorted[0] || null, to: tsSorted[tsSorted.length - 1] || null, spanDays,
+      tier,
+    };
+    summary.label = erLabel(summary.avgER, tier);
+
+    const byType = {};
+    for (const ty of TYPES) {
+      const g = posts.filter(p => p.type === ty);
+      byType[ty] = {
+        n: g.length, avgER: mean(vals(g, p => p.er)), medER: median(vals(g, p => p.er)),
+        avgLikes: mean(vals(g, p => p.likes)), avgComments: mean(vals(g, p => p.comments)),
+        avgViews: mean(vals(g, p => p.views)), avgEng: mean(g.map(p => p.eng)),
+        share: posts.length ? g.length / posts.length : 0,
+      };
+    }
+    const ranked = [...posts].sort((a, b) => score(b) - score(a));
+    const top5 = ranked.slice(0, 5);
+    const bottom5 = ranked.length > 5 ? ranked.slice(-5).reverse() : [];
+
+    // heatmap performa (hari × jam)
+    const heat = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ n: 0, scores: [] })));
+    for (const p of posts) { const c = heat[p.dow][p.hour]; c.n++; c.scores.push(score(p)); }
+    heat.forEach(r => r.forEach(c => { c.med = median(c.scores); }));
+    const groupAvg = keyFn => {
+      const m = new Map();
+      for (const p of posts) { const k = keyFn(p); const g = m.get(k) || []; g.push(score(p)); m.set(k, g); }
+      return [...m.entries()].map(([k, a]) => ({ k, n: a.length, avg: median(a) }));
+    };
+    const minN = posts.length >= 30 ? 3 : 2;
+    const pickBest = arr => { const ok = arr.filter(x => x.n >= minN), rest = arr.filter(x => x.n < minN); return [...ok.sort((a, b) => b.avg - a.avg), ...rest.sort((a, b) => b.avg - a.avg)]; };
+    const byDay = pickBest(groupAvg(p => p.dow));
+    const byBlock = pickBest(groupAvg(p => Math.floor(p.hour / 3)));
+    const overallAvg = median(posts.map(score));
+
+    // komentar
+    const comments = [...store.comments.values()].map(c => {
+      let code = c.media;
+      if (code && code.startsWith('pk:')) code = store.mediaPkToCode.get(code.slice(3)) || null;
+      return { ...c, code };
+    });
+    const myCodes = new Set(posts.map(p => p.code));
+    const audComments = comments.filter(c => c.user !== account && (!c.code || myCodes.has(c.code)));
+    const commentHeat = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    for (const c of audComments) if (isNum(c.t)) { const { dow, hour } = jkt(c.t); commentHeat[dow][hour]++; }
+    let audSource = null;
+    if (store.insights.audienceHours) audSource = 'insights';
+    else if (audComments.filter(c => isNum(c.t)).length) audSource = 'comments';
+
+    const sumLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
+    const sumComments = posts.reduce((s, p) => s + (p.comments || 0), 0);
+    const commenters = new Map();
+    const sent = { pos: 0, neg: 0, neu: 0 };
+    const sentEx = { pos: [], neg: [] };
+    for (const c of audComments) {
+      const e = commenters.get(c.user) || { user: c.user, n: 0, posts: new Set() };
+      e.n++; if (c.code) e.posts.add(c.code); commenters.set(c.user, e);
+      const s = sentiment(c.text); sent[s]++;
+      if (s !== 'neu' && sentEx[s].length < 3 && c.text.length > 6) sentEx[s].push(c.text.slice(0, 120));
+    }
+    const behavior = {
+      sumLikes, sumComments,
+      commentsPer100Likes: sumLikes ? sumComments / sumLikes * 100 : null,
+      likesPerComment: sumComments ? sumLikes / sumComments : null,
+      commentsN: audComments.length,
+      avgLen: mean(audComments.map(c => [...c.text].length)),
+      qPct: audComments.length ? audComments.filter(c => Q_RE.test(c.text.trim())).length / audComments.length * 100 : null,
+      topCommenters: [...commenters.values()].map(e => ({ user: e.user, n: e.n, posts: e.posts.size })).sort((a, b) => b.posts - a.posts || b.n - a.n).slice(0, 10),
+      loyal: [...commenters.values()].filter(e => e.posts.size >= 2).length,
+      uniqueCommenters: commenters.size,
+      sent, sentEx,
+    };
+
+    // what works
+    let works = null;
+    if (ranked.length >= 6) {
+      const k = Math.max(3, Math.round(ranked.length * 0.25));
+      const top = ranked.slice(0, k), bot = ranked.slice(-k);
+      const pct = (g, f) => g.filter(f).length / g.length * 100;
+      const typeMix = g => TYPES.map(ty => `${TYPE_LABEL[ty]} ${Math.round(pct(g, p => p.type === ty))}%`).join(' · ');
+      const modeHour = g => { const c = new Array(8).fill(0); g.forEach(p => c[Math.floor(p.hour / 3)]++); const i = c.indexOf(Math.max(...c)); return `${String(i * 3).padStart(2, '0')}:00–${String(i * 3 + 3).padStart(2, '0')}:00`; };
+      const durT = mean(vals(top.filter(p => p.type === 'reel'), p => p.duration)), durB = mean(vals(bot.filter(p => p.type === 'reel'), p => p.duration));
+      const rows = [
+        { label: 'Komposisi tipe konten', top: typeMix(top), bot: typeMix(bot) },
+        { label: 'Rata-rata panjang caption', top: mean(top.map(p => p.capLen)), bot: mean(bot.map(p => p.capLen)), unit: 'karakter', key: 'cap' },
+        { label: 'Post dengan CTA', top: pct(top, p => p.cta), bot: pct(bot, p => p.cta), unit: '%', key: 'cta' },
+        { label: 'Rata-rata jumlah hashtag', top: mean(top.map(p => p.hashtags.length)), bot: mean(bot.map(p => p.hashtags.length)), key: 'tags', dec: 1 },
+        { label: 'Hook kalimat pertama berupa pertanyaan', top: pct(top, p => p.hookQ), bot: pct(bot, p => p.hookQ), unit: '%', key: 'hookQ' },
+        { label: 'Hook kalimat pertama memuat angka', top: pct(top, p => p.hookNum), bot: pct(bot, p => p.hookNum), unit: '%', key: 'hookNum' },
+        { label: 'Panjang hook (kalimat pertama)', top: mean(top.map(p => [...p.hook].length)), bot: mean(bot.map(p => [...p.hook].length)), unit: 'karakter', key: 'hookLen' },
+        { label: 'Rata-rata durasi reel', top: durT, bot: durB, unit: 'detik', key: 'dur' },
+        { label: 'Post kolaborasi (collab)', top: pct(top, p => p.collab), bot: pct(bot, p => p.collab), unit: '%', key: 'collab' },
+        { label: 'Jam posting paling sering (WIB)', top: modeHour(top), bot: modeHour(bot) },
+      ];
+      const tagStat = new Map();
+      for (const p of posts) for (const h of new Set(p.hashtags)) { const s = tagStat.get(h) || { tag: h, n: 0, inTop: 0, scores: [] }; s.n++; s.scores.push(score(p)); tagStat.set(h, s); }
+      for (const p of top) for (const h of new Set(p.hashtags)) tagStat.get(h).inTop++;
+      const topTags = [...tagStat.values()].filter(s => s.inTop > 0).map(s => ({ ...s, avg: mean(s.scores) })).sort((a, b) => b.inTop - a.inTop || b.avg - a.avg).slice(0, 12);
+      works = { k, rows, topTags, top, bot };
+    }
+
+    const ownComments = comments.filter(c => c.user === account && (!c.code || myCodes.has(c.code)));
+    const aud = audienceOf(store, account, posts, audComments, ownComments, F, score);
+    const insightsAvail = {
+      reach: posts.some(p => p.reach != null) || store.insights.account.reach != null || isNum(store.insights.metrics.reach_current_period),
+      impressions: posts.some(p => p.impressions != null) || store.insights.account.impressions != null || isNum(store.insights.metrics.views_current_period),
+      saves: posts.some(p => p.saves != null),
+      shares: posts.some(p => p.shares != null),
+      profile_visits: posts.some(p => p.profileVisits != null) || store.insights.account.profile_visits != null || isNum(store.insights.metrics.profile_visits_count),
+      audience: aud.ins.any || store.insights.audienceRaw.length > 0,
+      reposts: posts.some(p => p.reposts != null),
+    };
+    const sumOf = f => { const v = vals(posts, f); return v.length ? v.reduce((s, x) => s + x, 0) : null; };
+    const insightTotals = {
+      reach: sumOf(p => p.reach) ?? store.insights.account.reach ?? store.insights.metrics.reach_current_period ?? null,
+      impressions: sumOf(p => p.impressions) ?? store.insights.account.impressions ?? store.insights.metrics.views_current_period ?? null,
+      saves: sumOf(p => p.saves), shares: sumOf(p => p.shares),
+      profile_visits: sumOf(p => p.profileVisits) ?? store.insights.account.profile_visits ?? store.insights.metrics.profile_visits_count ?? null,
+      reposts: sumOf(p => p.reposts), repostsN: vals(posts, p => p.reposts).length,
+      account: store.insights.account, audienceRaw: store.insights.audienceRaw, audienceHours: store.insights.audienceHours,
+    };
+
+    const snapsAcc = (snapshots || []).filter(s => s.account === account).sort((a, b) => a.captureTs - b.captureTs);
+    const growth = growthOf(snapsAcc);
+
+    const A = {
+      aud, account, profile: prof, followers: F, posts, ranked, top5, bottom5, summary, byType,
+      heat, byDay, byBlock, overallAvg, commentHeat, audSource, comments: audComments, behavior, works,
+      insightsAvail, insightTotals, growth, snapshots: snapsAcc, captureTs: store.captureTs, excluded,
+      scoreLabel: F ? 'ER' : 'Engagement',
+    };
+    A.conclusions = conclude(A);
+    A.debug = debugInfo(store, A);
+    return A;
+  }
+
+  function freqOf(list, end) {
+    // rata-rata post/minggu dalam 90 hari terakhir (atau sepanjang data jika lebih pendek)
+    if (!list.length || !end) return null;
+    const winStart = end - 90 * 86400;
+    const oldest = Math.min(...list.map(p => p.t));
+    const start = Math.max(winStart, oldest);
+    const days = (end - start) / 86400;
+    if (days < 7) return null;
+    return list.filter(p => p.t >= start && p.t <= end).length / (days / 7);
+  }
+
+  function growthOf(snaps) {
+    if (snaps.length < 2) return null;
+    const a = snaps[0], b = snaps[snaps.length - 1];
+    const ch = (x, y) => isNum(x) && isNum(y) && x !== 0 ? (y - x) / x * 100 : null;
+    const days = (b.captureTs - a.captureTs) / 86400000;
+    return {
+      from: a.captureTs, to: b.captureTs, days,
+      followers: { a: a.followers, b: b.followers, pct: ch(a.followers, b.followers), abs: isNum(a.followers) && isNum(b.followers) ? b.followers - a.followers : null },
+      er: { a: a.avgER, b: b.avgER, pct: ch(a.avgER, b.avgER) },
+      views: { a: a.avgViews, b: b.avgViews, pct: ch(a.avgViews, b.avgViews) },
+      likes: { a: a.avgLikes, b: b.avgLikes, pct: ch(a.avgLikes, b.avgLikes) },
+    };
+  }
+
+  function makeSnapshot(A) {
+    return {
+      account: A.account, captureTs: A.captureTs || Date.now(), createdAt: Date.now(),
+      followers: A.followers, following: A.profile.following ?? null, mediaCount: A.profile.mediaCount ?? null,
+      avgER: A.summary.avgER, avgLikes: A.summary.avgLikes, avgComments: A.summary.avgComments, avgViews: A.summary.avgViews,
+      postsAnalyzed: A.summary.n, freqWeek: A.summary.freqWeek,
+      posts: A.posts.slice(0, 300).map(p => ({ c: p.code, t: p.t, ty: p.type, er: p.er, l: p.likes, cm: p.comments, v: p.views })),
+    };
+  }
+
+  // ---------- Kesimpulan & rekomendasi (berbasis angka) ----------
+  const f1 = v => isNum(v) ? v.toLocaleString('id-ID', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) : '–';
+  const f2 = v => isNum(v) ? v.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 2 }) : '–';
+  const f0 = v => isNum(v) ? Math.round(v).toLocaleString('id-ID') : '–';
+  const blockLabel = b => `${String(b * 3).padStart(2, '0')}.00–${String(b * 3 + 3).padStart(2, '0')}.00 WIB`;
+  function fmtScore(A, v) { return A.followers ? f2(v) + '%' : f0(v) + ' interaksi'; }
+
+  function conclude(A) {
+    const ins = [], recs = [];
+    const S = A.summary, F = A.followers;
+    if (!A.posts.length) return { ins: ['Tidak ada post milik akun ini yang ditemukan di file. Scroll grid post di halaman profil saat merekam HAR.'], recs: [] };
+    // 1. ER vs benchmark
+    if (isNum(S.avgER) && S.tier) {
+      const soloL = erLabel(S.avgERSolo, S.tier);
+      ins.push({ t: `ER rata-rata <b>${f2(S.avgER)}%</b> (median ${f2(S.medER)}%) — kategori <b>${S.label.text}</b> untuk akun ${S.tier.name}.${S.nCollab && S.nSolo && soloL ? ` Tanpa post collab: <b>${f2(S.avgERSolo)}%</b> (${soloL.text}).` : ''}`, why: `Dari ${S.n} post, ${f0(F)} followers. Patokan kategori ini: rata-rata ${S.tier.t[0]}–${S.tier.t[1]}%, bagus ${S.tier.t[1]}–${S.tier.t[2]}%. Median dipakai karena rata-rata mudah terangkat 1–2 post viral.` });
+      if (S.nCollab >= 2 && S.nSolo >= 2 && S.medERSolo > 0) {
+        const r = S.medERCollab / S.medERSolo;
+        if (r >= 1.5 || r <= 0.67) ins.push({ t: `Post <b>kolaborasi</b> (${S.nCollab} post) punya median ER ${f2(S.medERCollab)}% vs post sendiri ${f2(S.medERSolo)}% — <b>${r >= 1 ? f1(r) + '× lebih tinggi' : 'lebih rendah'}</b>.`, why: 'Likes post collab ikut terkumpul dari audiens partner, jadi ER-nya terhadap followers akun ini terlihat lebih besar.' });
+      }
+    } else {
+      ins.push({ t: `Jumlah followers tidak ditemukan, jadi ER dihitung sebagai total interaksi. Rata-rata <b>${f0(S.avgEng)}</b> interaksi per post.`, why: 'Buka halaman profil (refresh) saat merekam HAR supaya query profil ikut terekam.' });
+    }
+    // 2. Tipe konten
+    const types = TYPES.map(t => ({ t, ...A.byType[t] })).filter(x => x.n >= 2);
+    const key = F ? 'medER' : 'avgEng';
+    if (types.length >= 2) {
+      types.sort((a, b) => b[key] - a[key]);
+      const best = types[0], worst = types[types.length - 1];
+      const ratio = worst[key] > 0 ? best[key] / worst[key] : null;
+      ins.push({ t: `<b>${TYPE_LABEL[best.t]}</b> paling efektif: ${F ? 'ER median' : 'interaksi rata-rata'} ${fmtScore(A, best[key])} vs ${TYPE_LABEL[worst.t]} ${fmtScore(A, worst[key])}${ratio && ratio >= 1.2 ? ` (<b>${f1(ratio)}×</b> lipat)` : ''}.`, why: types.map(x => `${TYPE_LABEL[x.t]}: ${x.n} post`).join(', ') + '.' });
+      if (ratio && ratio >= 1.3) {
+        const shareBest = Math.round(best.share * 100);
+        recs.push({ t: `Perbanyak <b>${TYPE_LABEL[best.t]}</b>${shareBest < 60 ? ` — saat ini baru ${shareBest}% dari total post; naikkan ke ±${Math.min(80, shareBest + 25)}%` : ''}, dan kurangi porsi <b>${TYPE_LABEL[worst.t]}</b> (${Math.round(worst.share * 100)}% post, performa terendah).`, why: `${TYPE_LABEL[best.t]} ${fmtScore(A, best[key])} vs ${TYPE_LABEL[worst.t]} ${fmtScore(A, worst[key])}.` });
+      }
+    }
+    // 3. Waktu posting
+    const bd = A.byDay[0], bb = A.byBlock[0];
+    if (bd && bb && A.posts.length >= 6) {
+      const liftD = A.overallAvg ? (bd.avg / A.overallAvg - 1) * 100 : null;
+      ins.push({ t: `Hari terbaik: <b>${DAYS[bd.k]}</b>${liftD > 5 ? ` (+${f0(liftD)}% di atas median semua post)` : ''}; jam terbaik: <b>${blockLabel(bb.k)}</b>.`, why: `${DAYS[bd.k]}: ${bd.n} post, median ${fmtScore(A, bd.avg)}. Jam ${blockLabel(bb.k)}: ${bb.n} post, ${fmtScore(A, bb.avg)}. Sampel kecil = indikasi, bukan kepastian.` });
+      const alt = A.byBlock.slice(1, 3).filter(x => x.n >= 2).map(x => blockLabel(x.k));
+      recs.push({ t: `Jadwalkan post utama di <b>${DAYS[bd.k]}</b> pada <b>${blockLabel(bb.k)}</b>${alt.length ? `; slot alternatif: ${alt.join(', ')}` : ''}. Uji 4 minggu lalu bandingkan lagi dengan snapshot baru.`, why: 'Berdasarkan median performa post per hari & blok 3 jam (WIB).' });
+    }
+    // 4. Frekuensi
+    if (isNum(S.freqWeek)) {
+      ins.push({ t: `Frekuensi posting <b>${f1(S.freqWeek)} post/minggu</b> (${S.last30} post dalam 30 hari terakhir).`, why: `Dihitung dari 90 hari terakhir (atau sepanjang data jika lebih pendek), tanpa post yang di-pin.` });
+      if (S.freqWeek < 3) recs.push({ t: `Naikkan konsistensi ke <b>3–5 post/minggu</b> (sekarang ${f1(S.freqWeek)}). Pakai format ${types[0] ? TYPE_LABEL[types[0].t] : 'terbaik'} untuk menambah slot.`, why: 'Akun yang konsisten 3+ post/minggu umumnya lebih stabil di distribusi algoritma.' });
+      else if (S.freqWeek > 10 && isNum(S.avgER) && S.label && S.label.key === 'low') recs.push({ t: `Frekuensi sangat tinggi (${f1(S.freqWeek)}/minggu) tapi ER rendah — coba kurangi volume dan fokus pada kualitas tiap post.`, why: `ER rata-rata ${f2(S.avgER)}%.` });
+    }
+    // 5. Pola what works
+    if (A.works) {
+      const r = Object.fromEntries(A.works.rows.filter(x => x.key).map(x => [x.key, x]));
+      const notes = [];
+      if (r.cta && Math.abs(r.cta.top - r.cta.bot) >= 15) {
+        notes.push(`${f0(r.cta.top)}% post teratas memakai CTA vs ${f0(r.cta.bot)}% di post terbawah`);
+        if (r.cta.top > r.cta.bot) recs.push({ t: `Selalu tutup caption dengan <b>CTA spesifik</b> (mis. "Simpan untuk nanti", "Tag teman yang…", "Komen ‘MAU’"), karena post teratas lebih sering memakai CTA.`, why: `CTA: ${f0(r.cta.top)}% (top) vs ${f0(r.cta.bot)}% (bottom).` });
+      }
+      if (r.cap && r.cap.top && r.cap.bot && Math.abs(r.cap.top / r.cap.bot - 1) >= 0.3) {
+        const longer = r.cap.top > r.cap.bot;
+        notes.push(`caption post teratas ${longer ? 'lebih panjang' : 'lebih pendek'} (${f0(r.cap.top)} vs ${f0(r.cap.bot)} karakter)`);
+        recs.push({ t: longer ? `Caption yang lebih <b>informatif/bercerita</b> bekerja lebih baik — targetkan ±${Math.round(r.cap.top / 50) * 50} karakter dengan poin yang bisa disimpan.` : `Caption <b>singkat & to-the-point</b> bekerja lebih baik — targetkan di bawah ${Math.max(60, Math.round(r.cap.top / 50) * 50)} karakter.`, why: `Panjang caption rata-rata: ${f0(r.cap.top)} (top) vs ${f0(r.cap.bot)} (bottom) karakter.` });
+      }
+      if (r.dur && isNum(r.dur.top) && isNum(r.dur.bot) && Math.abs(r.dur.top - r.dur.bot) >= 5) {
+        notes.push(`reel teratas rata-rata ${f0(r.dur.top)} detik vs ${f0(r.dur.bot)} detik`);
+        recs.push({ t: `Durasi reel ideal di data ini sekitar <b>${f0(r.dur.top)} detik</b> — ${r.dur.top < r.dur.bot ? 'potong reel yang terlalu panjang' : 'tidak perlu takut membuat reel lebih panjang bila isinya padat'}.`, why: `Durasi rata-rata reel di post teratas ${f0(r.dur.top)} dtk vs terbawah ${f0(r.dur.bot)} dtk.` });
+      }
+      if (r.collab && Math.abs(r.collab.top - r.collab.bot) >= 20) {
+        if (!ins.some(x => /kolaborasi/.test(x.t))) notes.push(`${f0(r.collab.top)}% post teratas adalah collab vs ${f0(r.collab.bot)}% di terbawah`);
+        if (r.collab.top > r.collab.bot) recs.push({ t: `Lanjutkan & tambah <b>post kolaborasi</b> (fitur Collab) dengan brand/kreator relevan — terbukti mendorong performa.`, why: `Collab: ${f0(r.collab.top)}% di top vs ${f0(r.collab.bot)}% di bottom.` });
+      }
+      if (r.hookQ && r.hookQ.top - r.hookQ.bot >= 15) notes.push(`hook berupa pertanyaan lebih sering di post teratas (${f0(r.hookQ.top)}% vs ${f0(r.hookQ.bot)}%)`);
+      if (r.tags && Math.abs(r.tags.top - r.tags.bot) >= 2) notes.push(`jumlah hashtag rata-rata ${f1(r.tags.top)} (top) vs ${f1(r.tags.bot)} (bottom)`);
+      if (notes.length) ins.push({ t: `Pola post terbaik vs terburuk: ${notes.slice(0, 3).join('; ')}.`, why: `Membandingkan ${A.works.k} post teratas vs ${A.works.k} terbawah.` });
+    }
+    // 6. Percakapan
+    const B = A.behavior;
+    if (isNum(B.commentsPer100Likes)) {
+      const low = B.commentsPer100Likes < 1.5;
+      ins.push({ t: `Rasio percakapan: <b>${f1(B.commentsPer100Likes)} komentar per 100 likes</b> — ${low ? 'audiens cenderung pasif (like tanpa komentar)' : 'audiens cukup aktif berkomentar'}.`, why: `Total ${f0(B.sumComments)} komentar dan ${f0(B.sumLikes)} likes.` });
+      if (low) recs.push({ t: `Pancing percakapan: akhiri caption dengan <b>pertanyaan pilihan</b> ("Kamu tim A atau B?") dan balas komentar di 1 jam pertama.`, why: `Hanya ${f1(B.commentsPer100Likes)} komentar per 100 likes.` });
+    }
+    if (B.commentsN >= 10) {
+      const tot = B.sent.pos + B.sent.neg + B.sent.neu;
+      ins.push({ t: `Dari ${B.commentsN} komentar terbaca: <b>${f0(B.sent.pos / tot * 100)}% positif</b>, ${f0(B.sent.neg / tot * 100)}% negatif, ${f0(B.qPct)}% berupa pertanyaan.`, why: `${B.loyal} akun berkomentar di 2+ post (audiens loyal).` });
+      if (B.qPct >= 15) recs.push({ t: `Banyak pertanyaan di komentar (${f0(B.qPct)}%) — jadikan bahan konten <b>FAQ / Q&A carousel</b> dan pin jawaban di komentar.`, why: 'Persentase komentar berbentuk pertanyaan.' });
+    }
+    // 7. Growth
+    if (A.growth) {
+      const g = A.growth;
+      if (isNum(g.followers.pct)) ins.push({ t: `Followers ${g.followers.pct >= 0 ? 'naik' : 'turun'} <b>${f2(Math.abs(g.followers.pct))}%</b> (${g.followers.abs >= 0 ? '+' : ''}${f0(g.followers.abs)}) dalam ${f0(g.days)} hari antar snapshot.`, why: `ER rata-rata berubah ${isNum(g.er.pct) ? (g.er.pct >= 0 ? '+' : '') + f1(g.er.pct) + '%' : '–'}.` });
+    }
+    // hashtag
+    if (A.works && A.works.topTags.length) {
+      const tags = A.works.topTags.slice(0, 5).map(t => '#' + t.tag);
+      recs.push({ t: `Pertahankan hashtag yang muncul di post berperforma tinggi: ${tags.join(' ')}. Batasi 3–5 hashtag relevan per post.`, why: `Hashtag paling sering di ${A.works.k} post teratas.` });
+    }
+    if (A.summary.viewsN === 0 && A.byType.reel.n) recs.push({ t: `Data views reel belum ada di file ini — rekam ulang HAR sambil membuka tab <b>Reels</b> profil agar analisa views/plays lengkap.`, why: `${A.byType.reel.n} reel ditemukan tanpa angka views.` });
+    return { ins: ins.slice(0, 7), recs: recs.slice(0, 7) };
+  }
+
+  function debugInfo(store, A) {
+    const mine = A.posts;
+    const fieldCount = f => mine.filter(p => p[f] != null && p[f] !== '').length;
+    const fields = [
+      ['likes', 'Likes'], ['comments', 'Jumlah komentar'], ['views', 'Views/plays'], ['duration', 'Durasi video'],
+      ['caption', 'Caption'], ['saves', 'Saves'], ['shares', 'Shares'], ['reposts', 'Repost'], ['reach', 'Reach'], ['impressions', 'Impressions'],
+    ].map(([k, l]) => ({ key: k, label: l, n: k === 'duration' ? mine.filter(p => p.type === 'reel' && p.duration != null).length : fieldCount(k), of: k === 'duration' ? mine.filter(p => p.type === 'reel').length : mine.length }));
+    const pf = A.profile;
+    const profFields = [['followers', 'Followers'], ['following', 'Following'], ['mediaCount', 'Jumlah post'], ['bio', 'Bio'], ['category', 'Kategori'], ['fullName', 'Nama']]
+      .map(([k, l]) => ({ label: l, ok: pf[k] != null && pf[k] !== '' }));
+    return {
+      files: store.files, counts: { ...store.debug },
+      queries: [...store.queries.values()].map(q => ({ name: q.name, doc: q.doc, kind: q.kind, requests: q.requests, posts: q.posts.size, comments: q.comments, profiles: q.profiles, insights: q.insights, fails: q.fails, encodings: [...q.encodings].join(', ') })).sort((a, b) => b.posts - a.posts || b.requests - a.requests),
+      totalPosts: store.posts.size, accountPosts: mine.length, excluded: A.excluded,
+      comments: store.comments.size, accountComments: A.comments.length,
+      fields, profFields,
+      missing: [...fields.filter(f => f.n === 0).map(f => f.label), ...profFields.filter(f => !f.ok).map(f => 'Profil: ' + f.label), ...(A.comments.length ? [] : ['Isi komentar']), ...(A.insightsAvail.audience ? [] : ['Data audience (insights)'])],
+    };
+  }
+
+  return { classifyComment, detectLang, COMMENT_TYPES, PILLAR_LABEL, createStore, ingestHar, accountsIn, analyze, makeSnapshot, growthOf, parseBodies, sentiment, DAYS, TYPES, TYPE_LABEL, tierOf, erLabel };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+/*CORE-END*/
+</script>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const DAYS = Core.DAYS, TYPES = Core.TYPES, TL = Core.TYPE_LABEL;
+  const SNAP_KEY = 'igHarAnalyzer.snapshots.v1';
+  const THEME_KEY = 'igHarAnalyzer.theme';
+  let store = null, A = null, charts = [];
+
+  // ---------- util ----------
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const f0 = v => isNum(v) ? Math.round(v).toLocaleString('id-ID') : '–';
+  const f1 = v => isNum(v) ? v.toLocaleString('id-ID', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) : '–';
+  const f2 = v => isNum(v) ? v.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 2 }) : '–';
+  const compact = v => isNum(v) ? new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(v) : '–';
+  const pctCh = v => isNum(v) ? `${v >= 0 ? '▲ +' : '▼ '}${f2(v)}%` : '–';
+  const dtf = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', year: 'numeric' });
+  const dtfT = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'short', day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const dDate = t => t ? dtf.format(new Date(t * 1000)) : '–';
+  const dDateMs = t => t ? dtf.format(new Date(t)) : '–';
+  const dTime = t => t ? dtfT.format(new Date(t * 1000)) + ' WIB' : '–';
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const typeColor = t => cssVar(t === 'reel' ? '--s1' : t === 'carousel' ? '--s2' : '--s3');
+  const scoreFmt = v => A.followers ? f2(v) + '%' : f0(v);
+  const na = (txt = 'Data tidak tersedia di file ini') => `<span class="na">${esc(txt)}</span>`;
+  function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  function lsGet(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  function badge(l) { if (!l) return '<span class="badge b-na">n/a</span>'; const icon = { low: '▼', avg: '●', good: '▲', great: '★' }[l.key]; return `<span class="badge b-${l.key}">${icon} ${esc(l.text)}</span>`; }
+
+  // ---------- theme ----------
+  function applyTheme(t) {
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    else document.documentElement.removeAttribute('data-theme');
+  }
+  applyTheme(lsGet(THEME_KEY, null));
+  $('#btnTheme').addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (!document.documentElement.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    const next = dark ? 'light' : 'dark';
+    applyTheme(next); lsSet(THEME_KEY, next);
+    if (A) render();
+  });
+
+  // ---------- upload ----------
+  const drop = $('#drop'), fileIn = $('#fileIn');
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
+  fileIn.addEventListener('change', () => { handleFiles([...fileIn.files]); fileIn.value = ''; });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) handleFiles([...e.dataTransfer.files]); });
+
+  async function handleFiles(files) {
+    files = files.filter(f => /\.(har|json)$/i.test(f.name) || f.type.includes('json'));
+    if (!files.length) { toast('Pilih file .har'); return; }
+    $('#start').hidden = true; $('#dash').hidden = true; $('#loading').hidden = false;
+    $('#loading').textContent = 'Memproses ' + files.length + ' file…';
+    await new Promise(r => setTimeout(r, 30));
+    store = Core.createStore();
+    const errors = [];
+    for (const f of files) {
+      try {
+        let har = JSON.parse(await f.text());
+        Core.ingestHar(store, har, f.name);
+        har = null; // file mentah tidak disimpan
+      } catch (e) { errors.push(`${f.name}: ${e.message}`); }
+    }
+    $('#loading').hidden = true;
+    if (errors.length) toast(errors.join(' | '));
+    const accts = Core.accountsIn(store);
+    if (!accts.length) {
+      $('#start').hidden = false;
+      toast('Tidak ada data Instagram (post/profil) yang ditemukan. Cek panduan di bawah.');
+      return;
+    }
+    const sel = $('#acctSel');
+    sel.innerHTML = accts.map(a => `<option value="${esc(a.username)}">@${esc(a.username)} (${a.posts} post)</option>`).join('');
+    sel.hidden = accts.length < 2;
+    runAnalysis(accts[0].username);
+  }
+  $('#acctSel').addEventListener('change', e => runAnalysis(e.target.value));
+  $('#btnNew').addEventListener('click', () => { A = null; store = null; destroyCharts(); $('#dash').hidden = true; $('#dash').innerHTML = ''; $('#start').hidden = false; ['#btnNew', '#btnCsv', '#btnCsvC', '#btnCopy', '#btnPdf', '#acctSel'].forEach(s => $(s).hidden = true); window.scrollTo(0, 0); });
+
+  function runAnalysis(account) {
+    let snaps = lsGet(SNAP_KEY, []);
+    const pre = Core.analyze(store, account, snaps);
+    if (pre.posts.length || pre.followers != null) {
+      const snap = Core.makeSnapshot(pre);
+      snaps = snaps.filter(s => !(s.account === snap.account && s.captureTs === snap.captureTs));
+      snaps.push(snap);
+      if (!lsSet(SNAP_KEY, snaps)) toast('Snapshot tidak bisa disimpan di browser ini — gunakan Export JSON.');
+    }
+    A = Core.analyze(store, account, snaps);
+    $('#start').hidden = true;
+    ['#btnNew', '#btnCsv', '#btnCsvC', '#btnCopy', '#btnPdf'].forEach(s => $(s).hidden = false);
+    $('#btnCsvC').disabled = !A.comments.length;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- charts ----------
+  function destroyCharts() { charts.forEach(c => c.destroy()); charts = []; }
+  function chartDefaults() {
+    if (!window.Chart) return false;
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 11.5;
+    Chart.defaults.color = cssVar('--text-2');
+    Chart.defaults.borderColor = cssVar('--border');
+    Chart.defaults.plugins.tooltip.backgroundColor = cssVar('--text');
+    Chart.defaults.plugins.tooltip.titleColor = cssVar('--bg');
+    Chart.defaults.plugins.tooltip.bodyColor = cssVar('--bg');
+    Chart.defaults.plugins.tooltip.padding = 9;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.boxHeight = 10;
+    Chart.defaults.maintainAspectRatio = false;
+    return true;
+  }
+  function mkChart(id, cfg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!window.Chart) { el.parentElement.innerHTML = na('Grafik butuh koneksi internet (Chart.js dari CDN). Data lain tetap tampil.'); return; }
+    charts.push(new Chart(el, cfg));
+  }
+  const gridOpts = () => ({ color: cssVar('--border'), drawTicks: false });
+
+  // ---------- render ----------
+  function render() {
+    destroyCharts();
+    const hasChart = chartDefaults();
+    const d = $('#dash');
+    const P = A.profile, S = A.summary;
+    const nav = [['ringkasan', 'Ringkasan'], ['er', 'Engagement'], ['konten', 'Konten'], ['waktu', 'Waktu posting'], ['behavior', 'Audience behavior'], ['insights', 'Insights'], ['growth', 'Growth'], ['works', 'What works'], ['kesimpulan', 'Kesimpulan']];
+    const capInfo = A.captureTs ? dDateMs(A.captureTs) : '–';
+    d.innerHTML = `
+      <div class="print-only" style="margin:8px 0 14px"><h1 style="margin:0">Laporan Instagram @${esc(A.account)}</h1><div style="color:#555">Data direkam ${capInfo} · ${S.n} post dianalisa · zona waktu WIB</div></div>
+      <nav class="sections">${nav.map(([id, l]) => `<a href="#${id}">${l}</a>`).join('')}</nav>
+      ${secSummary()}
+      ${secER()}
+      ${secContent()}
+      ${secTiming()}
+      ${secAudience()}
+      ${secInsights()}
+      ${secGrowth()}
+      ${secWorks()}
+      ${secConclusion()}
+      ${secDebug()}
+      <div class="foot">Dibuat dengan Instagram HAR Analyzer · diproses lokal di browser · ${new Date().toLocaleString('id-ID')}</div>`;
+    d.hidden = false;
+    d.querySelectorAll('nav.sections a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); const el = document.getElementById(a.getAttribute('href').slice(1)); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 70, behavior: 'smooth' }); }));
+    bindGrowthButtons();
+    bindAudience();
+    bindCopySummary();
+    if (hasChart) drawCharts(); else d.querySelectorAll('canvas').forEach(c => c.parentElement.innerHTML = na('Grafik butuh koneksi internet (Chart.js dari CDN). Data lain tetap tampil.'));
+  }
+
+  function section(id, n, title, sub, body) {
+    return `<section class="block" id="${id}"><h2><span class="num">${n}</span>${title}</h2>${sub ? `<p class="sub">${sub}</p>` : ''}${body}</section>`;
+  }
+  function kpi(l, v, s = '') { return `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`; }
+
+  function secSummary() {
+    const P = A.profile, S = A.summary;
+    const initial = (A.account || '?')[0].toUpperCase();
+    return section('ringkasan', 1, 'Ringkasan akun', `Data direkam ${A.captureTs ? dDateMs(A.captureTs) : '–'} · periode post ${dDate(S.from)} – ${dDate(S.to)}`, `
+      <div class="card" style="margin-bottom:12px"><div class="profile">
+        <div class="avatar">${esc(initial)}</div>
+        <div class="meta">
+          <div class="name">@${esc(A.account)} ${P.verified ? '<span class="badge b-good">✓ Verified</span>' : ''}</div>
+          <div style="color:var(--text-2)">${esc(P.fullName || '')}${P.category ? ` · <span class="chip">${esc(P.category)}</span>` : ''}</div>
+          ${P.bio ? `<div class="bio">${esc(P.bio)}</div>` : ''}
+          <div style="margin-top:6px"><a href="https://www.instagram.com/${encodeURIComponent(A.account)}/" target="_blank" rel="noopener">Buka profil ↗</a></div>
+        </div>
+        <div class="split" style="flex:0 1 360px">
+          ${kpi('Followers', f0(P.followers))}${kpi('Following', f0(P.following))}${kpi('Total post', f0(P.mediaCount), `${S.n} dianalisa`)}
+        </div>
+      </div></div>
+      <div class="kpis">
+        ${kpi('ER rata-rata', isNum(S.avgER) ? f2(S.avgER) + '%' : '–', isNum(S.medER) ? `median ${f2(S.medER)}% · ${badge(S.label)}` : 'butuh data followers')}
+        ${kpi('Rata-rata likes', f0(S.avgLikes))}
+        ${kpi('Rata-rata komentar', f1(S.avgComments))}
+        ${kpi('Rata-rata views', S.viewsN ? f0(S.avgViews) : '–', S.viewsN ? `${S.viewsN} video` : 'data tidak tersedia di file ini')}
+        ${kpi('Frekuensi posting', isNum(S.freqWeek) ? f1(S.freqWeek) + '<span style="font-size:13px;font-weight:500"> /minggu</span>' : '–', `rata-rata 90 hari terakhir · ${S.last30} post dalam 30 hari`)}
+      </div>`);
+  }
+
+  function secER() {
+    const S = A.summary, t = S.tier;
+    const bench = t ? `
+      <div class="tbl-wrap"><table><thead><tr><th>Kategori (${esc(t.name)})</th><th class="n">ER</th></tr></thead><tbody>
+        <tr><td>${badge({ key: 'low', text: 'Rendah' })}</td><td class="n">&lt; ${t.t[0]}%</td></tr>
+        <tr><td>${badge({ key: 'avg', text: 'Rata-rata' })}</td><td class="n">${t.t[0]} – ${t.t[1]}%</td></tr>
+        <tr><td>${badge({ key: 'good', text: 'Bagus' })}</td><td class="n">${t.t[1]} – ${t.t[2]}%</td></tr>
+        <tr><td>${badge({ key: 'great', text: 'Sangat bagus' })}</td><td class="n">≥ ${t.t[2]}%</td></tr>
+      </tbody></table></div>
+      <p class="na" style="margin-top:8px">Patokan umum industri (ER by followers) — perkiraan, bukan angka resmi Instagram.</p>` : na('Followers tidak ditemukan — ER tidak bisa dihitung.');
+    const cnt = { low: 0, avg: 0, good: 0, great: 0 };
+    A.posts.forEach(p => { const l = Core.erLabel(p.er, t); if (l) cnt[l.key]++; });
+    const totalL = Object.values(cnt).reduce((a, b) => a + b, 0);
+    const dist = totalL ? `<div style="margin-top:8px">${['great', 'good', 'avg', 'low'].map(k => `<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:8px">${badge({ key: k, text: { great: 'Sangat bagus', good: 'Bagus', avg: 'Rata-rata', low: 'Rendah' }[k] })}<span>${cnt[k]} post (${f0(cnt[k] / totalL * 100)}%)</span></div><div class="bar-h"><span style="width:${cnt[k] / totalL * 100}%;background:var(--accent)"></span></div>`).join('')}</div>` : '';
+    const formula = `ER per post = (likes + komentar${A.insightsAvail.saves ? ' + saves' : ''}${A.insightsAvail.shares ? ' + shares' : ''}) ÷ followers × 100.${A.insightsAvail.saves || A.insightsAvail.shares ? '' : ' Saves & shares tidak tersedia di file ini, jadi tidak dihitung.'}`;
+    return section('er', 2, 'Engagement Rate', esc(formula), `
+      <div class="kpis" style="margin-bottom:12px">
+        ${kpi('ER rata-rata (by followers)', isNum(S.avgER) ? f2(S.avgER) + '%' : '–', badge(S.label))}
+        ${kpi('ER median', isNum(S.medER) ? f2(S.medER) + '%' : '–', 'lebih tahan outlier')}
+        ${kpi('ER by reach', isNum(S.avgERReach) ? f2(S.avgERReach) + '%' : '–', isNum(S.avgERReach) ? 'dari data insights' : 'data reach tidak tersedia di file ini')}
+        ${S.nCollab ? kpi('ER tanpa collab', isNum(S.avgERSolo) ? f2(S.avgERSolo) + '%' : '–', `${S.nSolo} post sendiri · median ${f2(S.medERSolo)}%`) + kpi('ER post collab', isNum(S.avgERCollab) ? f2(S.avgERCollab) + '%' : '–', `${S.nCollab} post · median ${f2(S.medERCollab)}%`) : ''}
+        ${kpi('Interaksi rata-rata', f0(S.avgEng), 'likes + komentar per post')}
+      </div>
+      <div class="grid g2">
+        <div class="card"><h3>Tren ${A.scoreLabel} per post (maks. 12 bulan terakhir)</h3><div class="chart-box tall"><canvas id="cTrend" role="img" aria-label="Tren ER per post"></canvas></div></div>
+        <div class="card"><h3>Benchmark & distribusi post</h3>${bench}${dist}</div>
+      </div>`);
+  }
+
+  function postRow(p, i) {
+    return `<tr><td>${i + 1}</td><td><span class="sw" style="background:${typeColor(p.type)}"></span>${TL[p.type]}${p.collab ? ' <span class="chip">collab</span>' : ''}${p.pinned ? ' <span class="chip">pin</span>' : ''}</td>
+      <td style="white-space:nowrap">${dTime(p.t)}</td><td><div class="cap">${esc(p.caption.slice(0, 220)) || '<span class="na">(tanpa caption)</span>'}</div></td>
+      <td class="n">${f0(p.likes)}</td><td class="n">${f0(p.comments)}</td><td class="n">${p.views != null ? f0(p.views) : '–'}</td><td class="n"><b>${A.followers ? f2(p.er) + '%' : f0(p.eng)}</b></td>
+      <td><a href="${p.url}" target="_blank" rel="noopener">Lihat ↗</a></td></tr>`;
+  }
+  function postTable(list) {
+    if (!list.length) return na('Belum cukup post.');
+    return `<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Tipe</th><th>Waktu</th><th>Caption</th><th class="n">Likes</th><th class="n">Kom.</th><th class="n">Views</th><th class="n">${A.scoreLabel}</th><th></th></tr></thead><tbody>${list.map(postRow).join('')}</tbody></table></div>`;
+  }
+
+  function secContent() {
+    const rows = TYPES.map(t => { const b = A.byType[t]; return `<tr><td><span class="sw" style="background:${typeColor(t)}"></span>${TL[t]}</td><td class="n">${b.n}</td><td class="n">${f0(b.share * 100)}%</td><td class="n"><b>${A.followers ? (isNum(b.avgER) ? f2(b.avgER) + '%' : '–') : f0(b.avgEng)}</b></td><td class="n">${f0(b.avgLikes)}</td><td class="n">${f1(b.avgComments)}</td><td class="n">${t === 'reel' ? (isNum(b.avgViews) ? f0(b.avgViews) : '<span class="na">n/a</span>') : '–'}</td></tr>`; }).join('');
+    return section('konten', 3, 'Perbandingan konten', 'Reel vs Carousel vs Foto, plus 5 post terbaik & terburuk.', `
+      <div class="grid g2" style="margin-bottom:12px">
+        <div class="card"><h3>Rata-rata ${A.scoreLabel} per tipe konten</h3><div class="chart-box"><canvas id="cType" role="img" aria-label="ER per tipe konten"></canvas></div></div>
+        <div class="card"><h3>Tabel per tipe</h3><div class="tbl-wrap"><table><thead><tr><th>Tipe</th><th class="n">Post</th><th class="n">Porsi</th><th class="n">${A.followers ? 'ER rata²' : 'Interaksi'}</th><th class="n">Likes</th><th class="n">Komentar</th><th class="n">Views</th></tr></thead><tbody>${rows}</tbody></table></div>
+        ${A.summary.viewsN ? '' : '<p class="na" style="margin-top:10px">Views/plays tidak ada di file ini (Instagram web sering menyembunyikannya di grid post). Rekam juga tab Reels profil.</p>'}</div>
+      </div>
+      <div class="card" style="margin-bottom:12px"><h3>🏆 Top 5 post</h3>${postTable(A.top5)}</div>
+      <div class="card"><h3>⚠️ Bottom 5 post</h3>${postTable(A.bottom5)}</div>`);
+  }
+
+  function heatGrid(cells, valFn, tipFn, labelFn) {
+    let max = 0;
+    cells.forEach(r => r.forEach(c => { const v = valFn(c); if (isNum(v) && v > max) max = v; }));
+    let h = '<div class="heat"><div></div>' + Array.from({ length: 24 }, (_, i) => `<div class="hl">${String(i).padStart(2, '0')}</div>`).join('');
+    cells.forEach((r, di) => {
+      h += `<div class="dl">${DAYS[di].slice(0, 3)}</div>`;
+      r.forEach((c, hi) => {
+        const v = valFn(c);
+        if (!isNum(v) || v <= 0 && !labelFn) { h += `<div class="c"></div>`; return; }
+        const a = max ? 0.12 + 0.88 * (v / max) : 0;
+        const ink = a > 0.55 ? '#fff' : 'var(--text)';
+        h += `<div class="c has" style="background:rgba(var(--heat-rgb),${a.toFixed(2)});color:${ink}" data-tip="${esc(`${DAYS[di]} ${String(hi).padStart(2, '0')}.00–${String(hi + 1).padStart(2, '0')}.00 WIB\n${tipFn(c, v)}`)}">${labelFn ? labelFn(c, v) : ''}</div>`;
+      });
+    });
+    return h + '</div>';
+  }
+  function heatLegend(lo, hi) { return `<div class="heat-legend"><span>${esc(lo)}</span><span class="ramp"></span><span>${esc(hi)}</span><span>· kosong = tidak ada data</span></div>`; }
+
+  function secTiming() {
+    const cells = A.heat;
+    const grid = heatGrid(cells, c => c.med, (c, v) => `${c.n} post · median ${A.followers ? 'ER ' + f2(v) + '%' : f0(v) + ' interaksi'}`, c => c.n);
+    const bl = b => `${String(b * 3).padStart(2, '0')}.00–${String(b * 3 + 3).padStart(2, '0')}.00`;
+    const list = (arr, lab) => arr.slice(0, 7).map((x, i) => `<tr><td>${i + 1}</td><td>${lab(x.k)}</td><td class="n">${x.n}</td><td class="n"><b>${scoreFmt(x.avg)}</b></td></tr>`).join('');
+    return section('waktu', 4, 'Jam & hari posting terbaik', 'Heatmap performa post berdasarkan waktu upload (WIB / Asia/Jakarta). Angka di kotak = jumlah post; warna = median ' + A.scoreLabel + ' (tahan terhadap 1–2 post viral).', `
+      <div class="card" style="margin-bottom:12px"><div class="heat-wrap">${grid}</div>${heatLegend('performa rendah', 'performa tinggi')}</div>
+      <div class="grid g2">
+        <div class="card"><h3>Ranking hari</h3><div class="tbl-wrap"><table><thead><tr><th>#</th><th>Hari</th><th class="n">Post</th><th class="n">${A.scoreLabel} median</th></tr></thead><tbody>${list(A.byDay, k => DAYS[k])}</tbody></table></div></div>
+        <div class="card"><h3>Ranking blok jam (WIB)</h3><div class="tbl-wrap"><table><thead><tr><th>#</th><th>Jam</th><th class="n">Post</th><th class="n">${A.scoreLabel} median</th></tr></thead><tbody>${list(A.byBlock, bl)}</tbody></table></div><p class="na" style="margin-top:8px">Slot dengan jumlah post cukup (≥${A.posts.length >= 30 ? 3 : 2}) diprioritaskan di atas.</p></div>
+      </div>`);
+  }
+
+  // ---------- Audience behavior ----------
+  const SRC = {
+    ins: '<span class="badge b-great" title="Angka asli dari Instagram Insights">📊 Data Insights</span>',
+    pub: '<span class="badge b-est" title="Dihitung dari angka & komentar yang terlihat publik">≈ Estimasi dari data publik</span>',
+  };
+  const NA_TXT = 'data tidak tersedia di file ini';
+  function acard(title, src, body, extra = '') {
+    return `<div class="card ${extra}"><div class="ah"><h3>${title}</h3>${SRC[src]}</div>${body}</div>`;
+  }
+  function distBars(items, opt = {}) {
+    if (!items || !items.length) return na(NA_TXT);
+    const list = [...items].sort((a, b) => b.value - a.value).slice(0, opt.limit || 8);
+    const tot = items.reduce((s, x) => s + x.value, 0) || 1;
+    const max = Math.max(...list.map(x => x.value)) || 1;
+    return `<div class="dist">${list.map(x => `<div class="dr"><span class="dlab" title="${esc(x.label)}">${esc(x.label)}</span><span class="db"><span style="width:${(x.value / max * 100).toFixed(1)}%;background:${opt.color || 'var(--accent)'}"></span></span><span class="dv">${opt.raw ? f0(x.value) + ' · ' : ''}${f0(x.value / tot * 100)}%</span></div>`).join('')}</div>`;
+  }
+  const hint = t => `<p class="hint">${t}</p>`;
+  const dur = s => !isNum(s) ? '–' : s < 90 ? f0(s) + ' detik' : s < 5400 ? f0(s / 60) + ' menit' : s < 172800 ? f1(s / 3600) + ' jam' : f1(s / 86400) + ' hari';
+  const SENT_LABEL = { pos: 'Positif', neu: 'Netral', neg: 'Negatif' };
+
+  function secAudience() {
+    const { ins, pub, conclusions } = A.aud;
+    const D = ins.demo;
+    // ----- A. Insights -----
+    const demoBlock = (lab, d) => `<div class="mini"><div class="mini-h">${lab}</div>${distBars(d, { limit: 6 })}</div>`;
+    const demo = ins.hasDemo
+      ? `<div class="mini-grid">${demoBlock('Gender', D.gender)}${demoBlock('Umur', D.age || D.ageGender)}${demoBlock('Kota teratas', D.city)}${demoBlock('Negara teratas', D.country)}</div>`
+      : na(NA_TXT) + hint('Buka Insights → Total followers / Accounts reached saat merekam HAR.');
+    let split = na(NA_TXT) + hint('Buka Insights → Accounts reached (Followers vs Non-followers).');
+    const splitBar = (title, s) => { const tot = s.followers + s.nonFollowers || 1; return `<div class="mini-h">${title}</div><div class="stack"><span style="flex:${s.followers};background:var(--s1)"></span><span style="flex:${s.nonFollowers};background:var(--s2)"></span></div>
+        <div class="legend-row" style="margin-bottom:10px"><span><span class="sw" style="background:var(--s1)"></span>Followers <b>${f1(s.followers / tot * 100)}%</b> (${f0(s.followers)})</span><span><span class="sw" style="background:var(--s2)"></span>Non-followers <b>${f1(s.nonFollowers / tot * 100)}%</b> (${f0(s.nonFollowers)})</span></div>`; };
+    if (ins.viewsSplit || ins.interSplit) {
+      split = (ins.viewsSplit ? splitBar('Views', ins.viewsSplit) : '') + (ins.interSplit ? splitBar('Interaksi', ins.interSplit) : '');
+    } else if (ins.followerSplit) {
+      const s = ins.followerSplit, tot = s.followers + s.nonFollowers || 1;
+      split = `<div class="stack"><span style="flex:${s.followers};background:var(--s1)"></span><span style="flex:${s.nonFollowers};background:var(--s2)"></span></div>
+        <div class="legend-row"><span><span class="sw" style="background:var(--s1)"></span>Followers <b>${f0(s.followers / tot * 100)}%</b> (${f0(s.followers)})</span><span><span class="sw" style="background:var(--s2)"></span>Non-followers <b>${f0(s.nonFollowers / tot * 100)}%</b> (${f0(s.nonFollowers)})</span></div>`;
+    }
+    const traffic = ins.traffic ? distBars(ins.traffic, { raw: true }) : na(NA_TXT) + hint('Buka Insights per post/reel → bagian "Sumber" / "Top sources of views".');
+    const watch = (ins.avgWatch != null || ins.retention)
+      ? `${ins.avgWatch != null ? `<div class="kv"><span>Rata-rata watch time</span><b>${f1(ins.avgWatch)} detik</b></div><div class="kv"><span>Reel dengan data watch time</span><b>${ins.watchN || '–'}</b></div>` : ''}
+         ${ins.watchByPost.length ? `<div class="tbl-wrap scroll-y sm"><table><thead><tr><th>Reel</th><th class="n">Watch time</th><th class="n">Durasi</th><th class="n">% ditonton</th></tr></thead><tbody>${ins.watchByPost.map(w => `<tr><td><a href="${w.url}" target="_blank" rel="noopener">${esc(w.code)}</a></td><td class="n">${f1(w.avgWatch)} dtk</td><td class="n">${w.duration ? f0(w.duration) + ' dtk' : '–'}</td><td class="n">${w.duration ? f0(w.avgWatch / w.duration * 100) + '%' : '–'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+         ${ins.retention ? `<div class="chart-box short"><canvas id="cRet" role="img" aria-label="Kurva retensi reel"></canvas></div>` : `<p class="na">Kurva retensi: ${NA_TXT}</p>`}`
+      : na(NA_TXT) + hint('Buka Insights tiap reel (Professional Dashboard → konten → reel → Lihat insights).');
+    const kv = (l, v) => `<div class="kv"><span>${l}</span>${v != null ? `<b>${f0(v)}</b>` : `<span class="na">${NA_TXT}</span>`}</div>`;
+    const actions = kv('Profile visits', ins.profileVisits) + kv('Follows dari konten', ins.follows) + kv('Klik link di bio', ins.linkClicks);
+    A._audHours = ins.hours;
+    const bestWin = h => { let b = 0, bv = -1; for (let i = 0; i < 24; i++) { const v = h[i] + h[(i + 1) % 24] + h[(i + 2) % 24]; if (v > bv) { bv = v; b = i; } } return `${String(b).padStart(2, '0')}.00–${String((b + 3) % 24).padStart(2, '0')}.00`; };
+    const active = ins.activeGrid
+      ? `<div class="heat-wrap">${heatGrid(ins.activeGrid, c => c, (c, v) => `±${f0(v)} followers online (rata-rata 30 hari)`, () => '')}</div>${heatLegend('sedikit', 'banyak followers online')}
+         <div class="kv"><span>Jam paling ramai</span><b>${bestWin(ins.hours)} WIB</b></div>
+         <div class="kv"><span>Hari paling ramai</span><b>${DAYS[ins.days.indexOf(Math.max(...ins.days))]}</b></div>
+         <p class="na">Instagram mengirim data ini per blok 3 jam dalam waktu Pacific (PT); sudah dikonversi ke WIB (+${ins.tzShift} jam). Karena itu label jamnya bisa beda dengan grafik di Instagram web.</p>`
+      : (ins.hours || ins.days)
+      ? `${ins.hours ? `<div class="chart-box short"><canvas id="cAudH" role="img" aria-label="Jam online followers"></canvas></div>` : `<p class="na">Jam: ${NA_TXT}</p>`}
+         ${ins.days ? `<div class="mini-h" style="margin-top:8px">Hari</div>${distBars(ins.days.map((v, i) => ({ label: DAYS[i], value: v })), { limit: 7 })}` : `<p class="na">Hari: ${NA_TXT}</p>`}
+         <p class="na">Zona waktu mengikuti data Insights.</p>`
+      : na(NA_TXT) + hint('Buka Insights → Total followers → "Most active times".');
+
+    // ----- B. Data publik -----
+    const N = pub.n;
+    const noC = (what = 'komentar') => na(NA_TXT) + hint(`Butuh isi ${what}: saat merekam HAR, buka beberapa post dan scroll kolom komentarnya.`);
+    const heat = N ? `<div class="heat-wrap">${heatGrid(pub.heat, c => c, (c, v) => `${v} komentar`, (c, v) => v || '')}</div>${heatLegend('sedikit', 'banyak komentar')}
+        <div class="split" style="margin-top:12px">
+          <div><div class="mini-h">Hari paling aktif</div>${distBars(pub.dayTotals.map((v, i) => ({ label: DAYS[i], value: v })), { limit: 7 })}</div>
+          <div><div class="mini-h">Blok jam paling aktif (WIB)</div>${distBars(pub.blocks.filter(b => b.n).map(b => ({ label: `${String(b.b * 3).padStart(2, '0')}.00–${String(b.b * 3 + 3).padStart(2, '0')}.00`, value: b.n })), { limit: 8 })}</div>
+        </div>
+        <p class="na" style="margin-top:8px">Dari ${N} komentar. Komentar menumpuk tepat setelah post diunggah, jadi ini indikasi kapan audiens aktif, bukan data pasti.</p>` : noC();
+    const sp = pub.speed;
+    const speed = sp ? `<div class="kv"><span>Median waktu komentar masuk</span><b>${dur(sp.median)}</b></div>
+        <div class="kv"><span>Komentar pertama per post (median)</span><b>${dur(sp.firstMedian)}</b></div>
+        <div class="kv"><span>Masuk dalam 1 jam pertama</span><b>${f0(sp.within1h)}%</b></div>
+        <div class="kv"><span>Masuk dalam 24 jam</span><b>${f0(sp.within24h)}%</b></div>
+        ${distBars(sp.buckets.filter(b => b.value), { limit: 5 })}
+        <p class="na">Dari ${sp.n} komentar di ${sp.postsWithComments} post. Instagram hanya memuat sebagian komentar, jadi ini perkiraan.</p>` : noC();
+    const r = pub.ratio, p100 = r.per100;
+    const ratio = `<div class="ratio">${[['Likes', 100, r.likes], ['Komentar', p100.comments, r.comments], ['Saves', p100.saves, r.saves], ['Shares', p100.shares, r.shares]].map(([l, v, t]) => `<div><div class="rv">${v == null ? '–' : l === 'Likes' ? '100' : f1(v)}</div><div class="rl">${l}</div><div class="rt">${t == null ? NA_TXT : 'total ' + f0(t)}</div></div>`).join('<span class="rsep">:</span>')}</div>
+        <p class="na">Dinormalisasi ke 100 likes.${r.reposts != null ? ` Repost publik: ${f1(p100.reposts)} per 100 likes (total ${f0(r.reposts)}).` : ''}</p>`;
+    const types = N ? `${distBars(pub.types.map(t => ({ label: t.label, value: t.value })), { limit: 5 })}
+        <div class="exs">${pub.types.filter(t => t.ex.length).map(t => `<div><b>${esc(t.label)}:</b> ${t.ex.map(x => `“${esc(x)}”`).join(' · ')}</div>`).join('')}</div>` : noC();
+    const st = pub.sent, stot = st.pos + st.neu + st.neg;
+    const sentB = stot ? `<div class="stack"><span style="flex:${st.pos};background:var(--good)"></span><span style="flex:${st.neu};background:var(--neutral)"></span><span style="flex:${st.neg};background:var(--bad)"></span></div>
+        <div class="legend-row"><span><span class="sw" style="background:var(--good)"></span>Positif <b>${f0(st.pos / stot * 100)}%</b></span><span><span class="sw" style="background:var(--neutral)"></span>Netral <b>${f0(st.neu / stot * 100)}%</b></span><span><span class="sw" style="background:var(--bad)"></span>Negatif <b>${f0(st.neg / stot * 100)}%</b></span></div>
+        <div class="exs">${pub.sentEx.pos.length ? `<div><b>Positif:</b> ${pub.sentEx.pos.map(t => `“${esc(t)}”`).join(' · ')}</div>` : ''}${pub.sentEx.neg.length ? `<div><b>Negatif:</b> ${pub.sentEx.neg.map(t => `“${esc(t)}”`).join(' · ')}</div>` : ''}</div>
+        <p class="na">Kamus kata & emoji Bahasa Indonesia + English.</p>` : noC();
+    const langs = N ? distBars(pub.langs, { raw: true }) + `<p class="na">Deteksi berdasarkan kata umum ID/EN. "Tidak terdeteksi" = kata tidak ada di kamus.</p>` : noC();
+    const reply = N ? `<div class="kv"><span>Balasan dari @${esc(A.account)}</span><b>${f0(pub.ownReplies)}</b></div><div class="kv"><span>Balasan per 100 komentar audiens</span><b>${f0(pub.replyPerAud)}</b></div>
+        <p class="na">Seberapa aktif akun membalas komentar yang terbaca.</p>` : noC();
+
+    const fmtRows = pub.formats.map(f => `<tr${pub.favFormat && f.type === pub.favFormat.type ? ' class="hl"' : ''}><td><span class="sw" style="background:${typeColor(f.type)}"></span>${TL[f.type]}${pub.favFormat && f.type === pub.favFormat.type ? ' <span class="badge b-great">★ favorit</span>' : ''}</td><td class="n">${f.n}</td><td class="n"><b>${scoreFmt(f.medScore)}</b></td><td class="n">${f0(f.avgLikes)}</td><td class="n">${f1(f.avgComments)}</td><td class="n">${f1(f.c100)}</td><td class="n">${f.avgViews != null ? f0(f.avgViews) : '–'}</td><td class="n">${f.posPct != null ? f0(f.posPct) + '%' : '–'}</td></tr>`).join('');
+    const formats = pub.formats.length ? `<div class="tbl-wrap"><table><thead><tr><th>Format</th><th class="n">Post</th><th class="n">${A.scoreLabel} median</th><th class="n">Likes</th><th class="n">Komentar</th><th class="n">Kom./100 likes</th><th class="n">Views</th><th class="n">% komentar positif</th></tr></thead><tbody>${fmtRows}</tbody></table></div>
+        ${pub.talkFormat && pub.favFormat && pub.talkFormat.type !== pub.favFormat.type ? `<p class="na">Paling memancing komentar: ${TL[pub.talkFormat.type]} (${f1(pub.talkFormat.c100)} komentar per 100 likes).</p>` : ''}` : na(NA_TXT);
+    const pRows = pub.pillars.map(p => `<tr><td>${esc(p.label)}</td><td class="n">${p.n}</td><td class="n">${f0(p.share)}%</td><td class="n"><b>${scoreFmt(p.medScore)}</b></td><td class="n">${f1(p.avgComments)}</td><td class="n">${f1(p.c100)}</td><td class="n">${p.posPct != null ? f0(p.posPct) + '%' : '–'}</td></tr>`).join('');
+    const pillars = pub.pillars.length ? `<div class="tbl-wrap"><table><thead><tr><th>Topik / pillar</th><th class="n">Post</th><th class="n">Porsi</th><th class="n">${A.scoreLabel} median</th><th class="n">Komentar</th><th class="n">Kom./100 likes</th><th class="n">% positif</th></tr></thead><tbody>${pRows}</tbody></table></div>
+        <p class="na">Dikelompokkan otomatis dari kata kunci caption & hashtag; 1 post bisa masuk beberapa topik. Topik dengan post terlalu sedikit ditaruh di bawah.</p>` : na(NA_TXT);
+    const L = pub.loyal;
+    const loyal = N ? `<div class="kpis tight">${kpi('Pengomentar unik', f0(L.unique))}${kpi('Repeat commenter', f0(L.repeat), isNum(L.repeatPct) ? f0(L.repeatPct) + '% dari pengomentar' : '')}${kpi('Komentar dari repeat commenter', isNum(L.commentsFromRepeatPct) ? f0(L.commentsFromRepeatPct) + '%' : '–')}</div>
+        <p class="na" style="margin:8px 0">Repeat commenter = ${esc(L.rule)}.</p>
+        <div class="tbl-wrap scroll-y"><table><thead><tr><th>Akun</th><th class="n">Komentar</th><th class="n">Di # post</th><th class="n">Positif</th><th class="n">Negatif</th><th class="n">Bertanya</th><th>Terakhir</th></tr></thead><tbody>
+        ${pub.commenters.map(c => `<tr><td><a href="https://www.instagram.com/${encodeURIComponent(c.user)}/" target="_blank" rel="noopener">@${esc(c.user)}</a>${c.repeat ? ' <span class="chip">loyal</span>' : ''}</td><td class="n">${c.n}</td><td class="n">${c.posts}</td><td class="n">${c.pos}</td><td class="n">${c.neg}</td><td class="n">${c.q}</td><td style="white-space:nowrap">${c.last ? dDate(c.last) : '–'}</td></tr>`).join('')}
+        </tbody></table></div><button class="btn sm no-print" id="btnCsvU" style="margin-top:8px">⬇ CSV semua pengomentar</button>` : noC();
+    const I = pub.interest;
+    const chips = (arr, f) => arr.length ? arr.map(f).join('') : `<span class="na">${NA_TXT}</span>`;
+    const interest = `<div class="mini-h">Topik konten paling direspon</div><p>${chips(I.topics, t => `<span class="chip">${esc(t.label)} · ${scoreFmt(t.medScore)}</span>`)}</p>
+        <div class="mini-h">Tema yang dibicarakan di komentar</div><p>${N ? chips(I.commentThemes, t => `<span class="chip">${esc(t.label)} · ${t.value}</span>`) : `<span class="na">${NA_TXT}</span>`}</p>
+        <div class="mini-h">Kata yang sering muncul di komentar</div><p>${N ? chips(I.words, t => `<span class="chip">${esc(t.label)} · ${t.value}</span>`) : `<span class="na">${NA_TXT}</span>`}</p>
+        <div class="mini-h">Emoji favorit</div><p>${N ? chips(I.emojis, t => `<span class="chip">${esc(t.label)} ${t.value}</span>`) : `<span class="na">${NA_TXT}</span>`}</p>
+        <div class="mini-h">Hashtag dengan respon tertinggi (min. 2 post)</div><p>${chips(I.hashtags, t => `<span class="chip">#${esc(t.tag)} · ${scoreFmt(t.med)}</span>`)}</p>`;
+
+    const opt = (o) => Object.entries(o).map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+    const langOpts = Object.fromEntries(pub.langs.map(l => [l.label, l.label]));
+    const MAXR = 1500;
+    const allC = N ? `<div class="filters no-print">
+          <input type="search" id="fcQ" class="btn" placeholder="Cari komentar / username…">
+          <select id="fcType" class="btn"><option value="">Semua jenis</option>${opt(Core.COMMENT_TYPES)}</select>
+          <select id="fcSent" class="btn"><option value="">Semua sentimen</option>${opt(SENT_LABEL)}</select>
+          <select id="fcLang" class="btn"><option value="">Semua bahasa</option>${opt(langOpts)}</select>
+          <span id="fcCount" class="na"></span>
+        </div>
+        <div class="tbl-wrap scroll-y tall"><table id="tblC"><thead><tr><th>Waktu (WIB)</th><th>Akun</th><th>Komentar</th><th>Post</th><th>Jenis</th><th>Sentimen</th><th>Bahasa</th><th class="n">Masuk setelah posting</th></tr></thead><tbody>
+        ${pub.rows.slice(0, MAXR).map(c => `<tr data-type="${c.type}" data-sent="${c.sent}" data-lang="${esc(c.lang)}" data-q="${esc((c.user + ' ' + c.text).toLowerCase())}"><td style="white-space:nowrap">${c.t ? dTime(c.t).replace(' WIB', '') : '–'}</td><td>@${esc(c.user)}</td><td class="ctext">${esc(c.text)}</td><td>${c.postUrl ? `<a href="${c.postUrl}" target="_blank" rel="noopener">${esc(c.code)}</a>` : '–'}</td><td>${esc(Core.COMMENT_TYPES[c.type])}</td><td><span class="sw" style="background:var(--${c.sent === 'pos' ? 'good' : c.sent === 'neg' ? 'bad' : 'neutral'})"></span>${SENT_LABEL[c.sent]}</td><td>${esc(c.lang)}</td><td class="n">${dur(c.delay)}</td></tr>`).join('')}
+        </tbody></table></div>${N > MAXR ? `<p class="na">Menampilkan ${MAXR} dari ${N} komentar — semua ada di CSV komentar.</p>` : ''}` : noC();
+
+    const concl = conclusions.length ? `<ol class="list-insights">${conclusions.map(c => `<li>${c.t}<span class="why">${SRC[c.src]}</span></li>`).join('')}</ol>`
+      : na('Belum cukup data untuk menyimpulkan audiens. Rekam HAR dengan membuka komentar post dan/atau halaman Insights.');
+
+    return section('behavior', 5, 'Audience behavior', `Dua sumber data: <b>Insights</b> (hanya akun yang kamu pegang aksesnya) dan <b>data publik</b> (bisa untuk semua akun, termasuk kompetitor). Komentar terbaca: <b>${f0(N)}</b> dari ${f0(pub.totalComments)} komentar di post yang dianalisa.`, `
+      <h3 class="subhead">A. Dari Insights ${SRC.ins}</h3>
+      ${ins.any ? '' : `<div class="card note">${na('Tidak ada data Insights di file ini.')} ${hint('Data ini hanya muncul kalau HAR direkam dari Professional Dashboard / Insights akun yang kamu kelola. Semua metrik di bawah: data tidak tersedia di file ini.')}</div>`}
+      ${ins.overview.length ? `<div class="grid g2" style="margin-bottom:12px">${acard(`Ringkasan Insights${ins.period ? ` (${dDate(ins.period.start)} – ${dDate(ins.period.end)})` : ''}`, 'ins', ins.overview.map(m => `<div class="kv"><span>${esc(m.label)}</span><b>${f0(m.value)}</b></div>`).join(''))}
+        ${acard('Views & interaksi per format', 'ins', ins.formatIns.length ? `<div class="tbl-wrap"><table><thead><tr><th>Format</th><th class="n">Views</th><th class="n">% dari non-followers</th><th class="n">Interaksi</th></tr></thead><tbody>${ins.formatIns.map(f => `<tr><td>${esc(f.label)}</td><td class="n">${f.views != null ? f0(f.views) : '–'}</td><td class="n">${f.views ? f0(f.nf / f.views * 100) + '%' : '–'}</td><td class="n">${f.inter != null ? f0(f.inter) : '–'}</td></tr>`).join('')}</tbody></table></div><p class="na">"Lainnya (kode …)" = tipe yang tidak diberi nama oleh Instagram web.</p>` : na(NA_TXT))}
+      </div>` : ''}
+      ${ins.topMedia.length ? `<div style="margin-bottom:12px">${acard('Top konten menurut Insights', 'ins', `<div class="tbl-wrap"><table><thead><tr><th>Post</th><th>Tanggal</th><th>Caption</th><th class="n">Views</th><th class="n">Akun berinteraksi</th></tr></thead><tbody>${ins.topMedia.map(t => `<tr><td>${t.url ? `<a href="${t.url}" target="_blank" rel="noopener">${esc(t.code)}</a>` : esc(t.id)} <span class="chip">${esc(t.type ? TL[t.type] : (t.ptype || ''))}</span></td><td style="white-space:nowrap">${dDate(t.t)}</td><td><div class="cap">${esc(t.caption)}</div></td><td class="n">${t.views != null ? f0(t.views) : '–'}</td><td class="n">${t.interacted != null ? f0(t.interacted) : '–'}</td></tr>`).join('')}</tbody></table></div>`)}</div>` : ''}
+      <div class="grid g3">
+        ${acard('Demografi', 'ins', demo, 'span2')}
+        ${acard('Followers vs non-followers', 'ins', split)}
+        ${acard('Sumber traffic', 'ins', traffic)}
+        ${acard('Watch time & retention reel', 'ins', watch)}
+        ${acard('Profile visits, follows & klik link bio', 'ins', actions)}
+        ${acard('Jam & hari aktif audience (data asli)', 'ins', active, ins.activeGrid ? 'span-all' : '')}
+      </div>
+
+      <h3 class="subhead">B. Dari data publik ${SRC.pub}</h3>
+      ${acard('Estimasi jam & hari aktif audience (dari timestamp komentar)', 'pub', heat)}
+      <div class="grid g3" style="margin-top:12px">
+        ${acard('Kecepatan respon', 'pub', speed)}
+        ${acard('Rasio likes : komentar : saves : shares', 'pub', ratio)}
+        ${acard('Jenis komentar', 'pub', types)}
+        ${acard('Sentimen komentar', 'pub', sentB)}
+        ${acard('Bahasa dominan audience', 'pub', langs)}
+        ${acard('Respon akun ke komentar', 'pub', reply)}
+      </div>
+      <div class="grid g2" style="margin-top:12px">
+        ${acard('Format favorit audience', 'pub', formats)}
+        ${acard('Topik / pillar konten paling direspon', 'pub', pillars)}
+        ${acard('Audience loyal (repeat commenter)', 'pub', loyal)}
+        ${acard('Estimasi interest audience', 'pub', interest)}
+      </div>
+      <div style="margin-top:12px">${acard(`Semua komentar terbaca (${f0(N)})`, 'pub', allC)}</div>
+
+      <h3 class="subhead">C. Siapa audiensnya & apa yang mereka suka</h3>
+      <div class="card">${concl}</div>`);
+  }
+
+  function bindAudience() {
+    const tbl = document.getElementById('tblC');
+    if (tbl) {
+      const rows = [...tbl.tBodies[0].rows];
+      const q = $('#fcQ'), ty = $('#fcType'), se = $('#fcSent'), la = $('#fcLang'), cnt = $('#fcCount');
+      const apply = () => {
+        const s = q.value.trim().toLowerCase(); let n = 0;
+        for (const r of rows) {
+          const ok = (!s || r.dataset.q.includes(s)) && (!ty.value || r.dataset.type === ty.value) && (!se.value || r.dataset.sent === se.value) && (!la.value || r.dataset.lang === la.value);
+          r.hidden = !ok; if (ok) n++;
+        }
+        cnt.textContent = `${n} komentar`;
+      };
+      [q, ty, se, la].forEach(el => el.addEventListener('input', apply));
+      apply();
+    }
+    const bu = $('#btnCsvU');
+    if (bu) bu.addEventListener('click', () => {
+      const head = ['username', 'jumlah_komentar', 'jumlah_post', 'repeat_commenter', 'positif', 'negatif', 'pertanyaan', 'pertama_wib', 'terakhir_wib'];
+      const rows = A.aud.pub.commenters.map(c => [c.user, c.n, c.posts, c.repeat ? 1 : 0, c.pos, c.neg, c.q, isoJkt(c.first), isoJkt(c.last)]);
+      download(`ig-${A.account}-pengomentar.csv`, toCsv(head, rows), 'text/csv;charset=utf-8');
+    });
+  }
+
+  function secInsights() {
+    const av = A.insightsAvail, T = A.insightTotals;
+    const row = (l, ok, v, note = '') => `<tr><td>${l}</td><td>${ok ? `<b>${v}</b>` : na()}</td><td style="color:var(--muted);font-size:12px">${note}</td></tr>`;
+    return section('insights', 6, 'Insights (Professional Dashboard)', 'Hanya muncul jika HAR direkam dari halaman Insights akun yang kamu kelola. Tidak ada angka yang dikarang.', `
+      <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Metrik</th><th>Nilai</th><th>Catatan</th></tr></thead><tbody>
+        ${row('Reach', av.reach, f0(T.reach), 'total dari post yang terekam')}
+        ${row('Impressions / Views', av.impressions, f0(T.impressions), 'Instagram kini memakai "Views" sebagai pengganti impressions')}
+        ${row('Saves', av.saves, f0(T.saves))}
+        ${row('Shares', av.shares, f0(T.shares))}
+        ${row('Profile visits', av.profile_visits, f0(T.profile_visits))}
+        ${row('Data audience (umur, gender, kota, jam online)', av.audience, T.audienceRaw.length ? T.audienceRaw.map(a => esc(a.key)).join(', ') : 'jam online', 'lihat panel Debug untuk data mentah')}
+        ${row('Repost publik (media_repost_count)', av.reposts, `${f0(T.reposts)} total dari ${T.repostsN} post`, 'bukan "shares" insights; tidak dimasukkan ke ER')}
+      </tbody></table></div></div>`);
+  }
+
+  function secGrowth() {
+    const G = A.growth, snaps = A.snapshots;
+    const cards = G ? `<div class="kpis" style="margin-bottom:12px">
+        ${kpi('Pertumbuhan followers', pctCh(G.followers.pct), `${f0(G.followers.a)} → ${f0(G.followers.b)} (${G.followers.abs >= 0 ? '+' : ''}${f0(G.followers.abs)})`)}
+        ${kpi('Perubahan ER rata-rata', pctCh(G.er.pct), `${f2(G.er.a)}% → ${f2(G.er.b)}%`)}
+        ${kpi('Perubahan rata-rata views', isNum(G.views.pct) ? pctCh(G.views.pct) : '–', isNum(G.views.pct) ? `${f0(G.views.a)} → ${f0(G.views.b)}` : 'data views tidak tersedia')}
+        ${kpi('Perubahan rata-rata likes', pctCh(G.likes.pct), `${f0(G.likes.a)} → ${f0(G.likes.b)}`)}
+        ${kpi('Rentang snapshot', f0(G.days) + ' hari', `${dDateMs(G.from)} → ${dDateMs(G.to)}`)}
+      </div>
+      <div class="grid g2" style="margin-bottom:12px">
+        <div class="card"><h3>Followers per snapshot</h3><div class="chart-box"><canvas id="cGF" role="img" aria-label="Followers per snapshot"></canvas></div></div>
+        <div class="card"><h3>ER rata-rata per snapshot</h3><div class="chart-box"><canvas id="cGE" role="img" aria-label="ER per snapshot"></canvas></div></div>
+        ${snaps.some(s => isNum(s.avgViews)) ? `<div class="card"><h3>Rata-rata views per snapshot</h3><div class="chart-box"><canvas id="cGV"></canvas></div></div>` : ''}
+      </div>` : `<div class="card" style="margin-bottom:12px">${na('Baru ada 1 snapshot untuk akun ini. Upload HAR akun yang sama di lain hari (atau import JSON snapshot) untuk melihat pertumbuhan.')}</div>`;
+    const list = `<div class="card no-print"><h3>Snapshot tersimpan (@${esc(A.account)})</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Tanggal data</th><th class="n">Followers</th><th class="n">ER rata²</th><th class="n">Likes rata²</th><th class="n">Post</th><th></th></tr></thead><tbody>
+      ${snaps.map(s => `<tr><td>${dDateMs(s.captureTs)}</td><td class="n">${f0(s.followers)}</td><td class="n">${isNum(s.avgER) ? f2(s.avgER) + '%' : '–'}</td><td class="n">${f0(s.avgLikes)}</td><td class="n">${s.postsAnalyzed}</td><td><button class="btn sm" data-del="${s.captureTs}">Hapus</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn sm" id="snapExp">⬇ Export snapshot (JSON)</button>
+        <label class="btn sm" for="snapImp">⬆ Import snapshot</label><input type="file" id="snapImp" accept=".json,application/json" hidden>
+      </div>
+      <p class="na" style="margin-top:8px">Snapshot tersimpan otomatis di browser ini (localStorage) — hanya angka ringkasan, bukan file HAR.</p></div>`;
+    return section('growth', 7, 'Growth', 'Setiap analisa disimpan sebagai snapshot per akun.', cards + list);
+  }
+
+  function bindGrowthButtons() {
+    const exp = $('#snapExp'), imp = $('#snapImp');
+    if (exp) exp.addEventListener('click', () => download(`snapshot-ig-${A.account}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'ig-har-analyzer', version: 1, snapshots: lsGet(SNAP_KEY, []) }, null, 1), 'application/json'));
+    if (imp) imp.addEventListener('change', async () => {
+      try {
+        const j = JSON.parse(await imp.files[0].text());
+        const incoming = Array.isArray(j) ? j : j.snapshots;
+        if (!Array.isArray(incoming)) throw new Error('format tidak dikenal');
+        const snaps = lsGet(SNAP_KEY, []);
+        let added = 0;
+        for (const s of incoming) {
+          if (!s || !s.account || !s.captureTs) continue;
+          if (!snaps.some(x => x.account === s.account && x.captureTs === s.captureTs)) { snaps.push(s); added++; }
+        }
+        lsSet(SNAP_KEY, snaps);
+        toast(`${added} snapshot diimport`);
+        A = Core.analyze(store, A.account, snaps); render();
+      } catch (e) { toast('Gagal import: ' + e.message); }
+    });
+    document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      const ts = Number(b.dataset.del);
+      const snaps = lsGet(SNAP_KEY, []).filter(s => !(s.account === A.account && s.captureTs === ts));
+      lsSet(SNAP_KEY, snaps);
+      A = Core.analyze(store, A.account, snaps); render();
+      document.getElementById('growth').scrollIntoView();
+    }));
+  }
+
+  function secWorks() {
+    const W = A.works;
+    if (!W) return section('works', 8, 'What works & what doesn\'t', '', `<div class="card">${na('Butuh minimal 6 post untuk membandingkan pola.')}</div>`);
+    const fmt = (r, v) => typeof v === 'string' ? esc(v) : !isNum(v) ? '–' : r.unit === '%' ? f0(v) + '%' : r.dec ? f1(v) : f0(v) + (r.unit && r.unit !== '%' ? ' ' + r.unit : '');
+    const rows = W.rows.map(r => {
+      let flag = '';
+      if (isNum(r.top) && isNum(r.bot)) {
+        const diff = r.unit === '%' ? r.top - r.bot : r.bot ? (r.top / r.bot - 1) * 100 : 0;
+        if (Math.abs(diff) >= (r.unit === '%' ? 15 : 25)) flag = `<span class="badge ${diff > 0 ? 'b-great' : 'b-low'}">${diff > 0 ? '▲ lebih tinggi di top' : '▼ lebih rendah di top'}</span>`;
+        else flag = '<span class="badge b-na">mirip</span>';
+      }
+      return `<tr><td>${esc(r.label)}</td><td><b>${fmt(r, r.top)}</b></td><td>${fmt(r, r.bot)}</td><td>${flag}</td></tr>`;
+    }).join('');
+    const tags = W.topTags.length ? `<div class="tbl-wrap"><table><thead><tr><th>Hashtag</th><th class="n">Di post top</th><th class="n">Total dipakai</th><th class="n">${A.scoreLabel} rata²</th></tr></thead><tbody>${W.topTags.map(t => `<tr><td>#${esc(t.tag)}</td><td class="n">${t.inTop}</td><td class="n">${t.n}</td><td class="n">${scoreFmt(t.avg)}</td></tr>`).join('')}</tbody></table></div>` : na('Post teratas tidak memakai hashtag.');
+    const hooks = W.top.slice(0, 5).filter(p => p.hook).map(p => `<li style="margin:4px 0"><span class="chip">${TL[p.type]}</span> “${esc(p.hook.slice(0, 140))}” <span style="color:var(--muted)">— ${scoreFmt(p.er ?? p.eng)}</span></li>`).join('');
+    return section('works', 8, 'What works & what doesn\'t', `Membandingkan ${W.k} post teratas vs ${W.k} post terbawah (berdasarkan ${A.scoreLabel}).`, `
+      <div class="card" style="margin-bottom:12px"><div class="tbl-wrap"><table><thead><tr><th>Faktor</th><th>Top ${W.k}</th><th>Bottom ${W.k}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="na" style="margin-top:8px">CTA dideteksi dari kata seperti "link di bio", "komen", "save", "share", "tag teman", "DM", "order", "yuk". Hook = kalimat pertama caption.</p></div>
+      <div class="grid g2">
+        <div class="card"><h3>Hashtag di post berperforma tinggi</h3>${tags}</div>
+        <div class="card"><h3>Contoh hook dari post teratas</h3>${hooks ? `<ul style="margin:0;padding-left:18px">${hooks}</ul>` : na('Tidak ada caption.')}</div>
+      </div>`);
+  }
+
+  function secConclusion() {
+    const C = A.conclusions;
+    const li = arr => arr.map(x => typeof x === 'string' ? `<li>${esc(x)}</li>` : `<li>${x.t}${x.why ? `<span class="why">📊 ${esc(x.why)}</span>` : ''}</li>`).join('');
+    return section('kesimpulan', 9, 'Kesimpulan & rekomendasi', 'Disusun otomatis dari angka di atas. Setiap poin menyertakan datanya.', `
+      <div class="grid g2">
+        <div class="card"><h3>💡 Insight utama</h3><ol class="list-insights">${li(C.ins)}</ol></div>
+        <div class="card"><h3>✅ Rekomendasi</h3>${C.recs.length ? `<ol class="list-insights recs">${li(C.recs)}</ol>` : na('Belum cukup data untuk rekomendasi.')}</div>
+      </div>
+      <div class="card no-print" id="copyCard" style="margin-top:12px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <h3 style="margin:0;flex:1 1 auto">📋 Ringkasan siap salin</h3>
+          <select id="sumFmt" class="btn sm" title="Format teks">${Object.entries(SUM_FMT).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+          <button class="btn sm primary" id="sumCopy">📋 Salin</button>
+        </div>
+        <textarea id="sumText" class="sumtext" readonly spellcheck="false" aria-label="Ringkasan laporan"></textarea>
+        <p class="hint">Tempel ke WhatsApp, email, Notion, atau dokumen laporan klien. Format WhatsApp memakai *tebal*, Markdown memakai **tebal**.</p>
+      </div>`);
+  }
+
+  // ---------- Ringkasan teks (clipboard) ----------
+  const SUM_FMT = { plain: 'Teks biasa', wa: 'WhatsApp', md: 'Markdown' };
+  const SUM_KEY = 'igHarAnalyzer.sumFmt';
+  function buildSummary(fmt) {
+    const S = A.summary, P = A.profile, C = A.conclusions;
+    const B = fmt === 'wa' ? '*' : fmt === 'md' ? '**' : '', I = fmt === 'plain' ? '' : '_';
+    const bold = s => B ? B + s + B : s;
+    const bullet = fmt === 'md' ? '- ' : '• ';
+    const head = s => fmt === 'md' ? `### ${s}` : fmt === 'wa' ? `*${s}*` : s.toUpperCase();
+    const plain = h => String(h ?? '')
+      .replace(/<b>(.*?)<\/b>/g, (_, x) => bold(x)).replace(/<i>(.*?)<\/i>/g, (_, x) => I + x + I)
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    const sc = p => A.followers ? `ER ${f2(p.er)}%` : `${f0(p.eng)} interaksi`;
+    const out = [];
+    const block = (title, lines) => { lines = lines.filter(Boolean); if (lines.length) out.push('', head(title), ...lines); };
+
+    out.push(`${fmt === 'md' ? '## ' : ''}${bold(`📊 Ringkasan Instagram @${A.account}`)}`);
+    out.push(`Data direkam ${A.captureTs ? dDateMs(A.captureTs) : '–'} · ${S.n} post dianalisa (${dDate(S.from)} – ${dDate(S.to)}) · zona waktu WIB`);
+
+    block('👤 Profil', [
+      `${bullet}Followers: ${bold(f0(P.followers))} · Following: ${f0(P.following)} · Total post: ${f0(P.mediaCount)}`,
+      P.category ? `${bullet}Kategori: ${P.category}` : '',
+    ]);
+    block('📈 Performa', [
+      isNum(S.avgER) ? `${bullet}ER rata-rata: ${bold(f2(S.avgER) + '%')} (median ${f2(S.medER)}%)${S.label ? ` — ${S.label.text}, akun ${S.tier.name}` : ''}` : `${bullet}Interaksi rata-rata: ${bold(f0(S.avgEng))} per post (followers tidak ditemukan)`,
+      `${bullet}Rata-rata likes: ${f0(S.avgLikes)} · komentar: ${f1(S.avgComments)}${S.viewsN ? ` · views: ${f0(S.avgViews)}` : ''}`,
+      isNum(S.freqWeek) ? `${bullet}Frekuensi posting: ${f1(S.freqWeek)} post/minggu (${S.last30} post dalam 30 hari terakhir)` : '',
+      S.nCollab && isNum(S.avgERSolo) ? `${bullet}Tanpa collab: ER ${f2(S.avgERSolo)}% (${S.nSolo} post) · collab: ER ${f2(S.avgERCollab)}% (${S.nCollab} post)` : '',
+    ]);
+    block('🎬 Per tipe konten', TYPES.filter(t => A.byType[t].n).map(t => {
+      const b = A.byType[t];
+      return `${bullet}${TL[t]}: ${b.n} post (${f0(b.share * 100)}%) · ${A.followers ? `ER rata² ${f2(b.avgER)}%` : `${f0(b.avgEng)} interaksi`} · ${f0(b.avgLikes)} likes${t === 'reel' && isNum(b.avgViews) ? ` · ${f0(b.avgViews)} views` : ''}`;
+    }));
+    if (A.byDay[0] && A.byBlock[0] && A.posts.length >= 6) {
+      const bl = k => `${String(k * 3).padStart(2, '0')}.00–${String(k * 3 + 3).padStart(2, '0')}.00 WIB`;
+      block('⏰ Waktu posting terbaik', [`${bullet}Hari: ${bold(DAYS[A.byDay[0].k])} · Jam: ${bold(bl(A.byBlock[0].k))}`]);
+    }
+    block('🏆 Top 3 post', A.top5.slice(0, 3).map((p, i) => `${i + 1}. ${TL[p.type]} · ${dDate(p.t)} · ${bold(sc(p))} · ${f0(p.likes)} likes — ${p.url}`));
+    if (A.growth) {
+      const G = A.growth;
+      block('🌱 Growth', [
+        isNum(G.followers.pct) ? `${bullet}Followers ${pctCh(G.followers.pct)} (${f0(G.followers.a)} → ${f0(G.followers.b)}) dalam ${f0(G.days)} hari` : '',
+        isNum(G.er.pct) ? `${bullet}ER rata-rata ${pctCh(G.er.pct)} (${f2(G.er.a)}% → ${f2(G.er.b)}%)` : '',
+      ]);
+    }
+    block('👥 Audiens', A.aud.conclusions.map(c => `${bullet}${plain(c.t)}`));
+    block('💡 Insight utama', C.ins.map((x, i) => `${i + 1}. ${plain(typeof x === 'string' ? x : x.t)}`));
+    block('✅ Rekomendasi', C.recs.map((x, i) => `${i + 1}. ${plain(x.t)}`));
+    out.push('', I + 'Dibuat dengan Instagram HAR Analyzer' + I);
+    return out.join('\n');
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e2) { }
+      ta.remove(); return ok;
+    }
+  }
+  function bindCopySummary() {
+    const sel = $('#sumFmt'), ta = $('#sumText'), btn = $('#sumCopy');
+    if (!sel) return;
+    const fill = () => { ta.value = buildSummary(sel.value); ta.rows = Math.min(24, ta.value.split('\n').length + 1); };
+    sel.value = SUM_FMT[lsGet(SUM_KEY, 'plain')] ? lsGet(SUM_KEY, 'plain') : 'plain';
+    fill();
+    sel.addEventListener('change', () => { lsSet(SUM_KEY, sel.value); fill(); });
+    btn.addEventListener('click', async () => toast(await copyText(ta.value) ? 'Ringkasan disalin ke clipboard ✓' : 'Gagal menyalin — pilih teks lalu tekan Ctrl/⌘+C'));
+  }
+
+  function secDebug() {
+    const D = A.debug;
+    const q = D.queries.map(x => `<tr><td class="mono">${esc(x.name)}</td><td class="mono">${esc(x.doc)}</td><td>${x.kind}</td><td class="n">${x.requests}</td><td class="n">${x.posts}</td><td class="n">${x.comments}</td><td class="n">${x.profiles}</td><td class="n">${x.insights}</td><td class="n">${x.fails}</td><td class="mono">${esc(x.encodings)}</td></tr>`).join('');
+    return `<details class="debug"><summary>🛠 Debug data</summary>
+      <h4>File</h4><div class="tbl-wrap"><table><thead><tr><th>Nama</th><th class="n">Entry</th><th class="n">Dipakai</th><th>Waktu rekam</th></tr></thead><tbody>${D.files.map(f => `<tr><td>${esc(f.name)}</td><td class="n">${f.entries}</td><td class="n">${f.used}</td><td>${f.captureTs ? new Date(f.captureTs).toLocaleString('id-ID') : '–'}</td></tr>`).join('')}</tbody></table></div>
+      <h4>Ringkasan</h4>
+      <p class="mono">Entry total ${D.counts.entries} · GraphQL ${D.counts.graphql} · REST cadangan ${D.counts.rest} · diabaikan ${D.counts.skipped} · body kosong ${D.counts.emptyBody} · gagal decode ${D.counts.decodeFail} · gagal parse ${D.counts.parseFail}<br>
+      Post unik ${D.totalPosts} → milik @${esc(A.account)} (termasuk collab) ${D.accountPosts} · post akun lain diabaikan ${D.excluded}<br>
+      Komentar terbaca ${D.comments} → untuk akun ini ${D.accountComments}</p>
+      <h4>Query GraphQL / endpoint ditemukan</h4>
+      <div class="tbl-wrap"><table><thead><tr><th>fb_api_req_friendly_name</th><th>doc_id</th><th>Jenis</th><th class="n">Req</th><th class="n">Post</th><th class="n">Komentar</th><th class="n">Profil</th><th class="n">Insights</th><th class="n">Gagal</th><th>Encoding</th></tr></thead><tbody>${q}</tbody></table></div>
+      <h4>Ketersediaan field (post milik akun)</h4>
+      <p>${D.fields.map(f => `<span class="chip">${f.n ? '✓' : '✗'} ${esc(f.label)} ${f.n}/${f.of}</span>`).join('')}</p>
+      <p>${D.profFields.map(f => `<span class="chip">${f.ok ? '✓' : '✗'} Profil: ${esc(f.label)}</span>`).join('')}</p>
+      <h4>Field tidak tersedia</h4><p>${D.missing.length ? D.missing.map(m => `<span class="chip">${esc(m)}</span>`).join('') : 'Semua field utama tersedia.'}</p>
+      ${A.insightTotals.audienceRaw.length ? `<h4>Data audience mentah</h4>${A.insightTotals.audienceRaw.map(a => `<p class="mono">${esc(a.key)}: ${esc(a.value)}</p>`).join('')}` : ''}
+      <p class="na">Header, cookie, dan token di file HAR tidak dibaca. File HAR tidak disimpan setelah diproses.</p>
+    </details>`;
+  }
+
+  // ---------- chart drawing ----------
+  function drawCharts() {
+    const text2 = cssVar('--text-2'), neutral = cssVar('--neutral'), accent = cssVar('--accent'), surface = cssVar('--surface');
+    const yFmt = v => A.followers ? f1(v) + '%' : compact(v);
+    // tipe konten
+    const tys = TYPES.filter(t => A.byType[t].n);
+    mkChart('cType', {
+      type: 'bar',
+      data: { labels: tys.map(t => `${TL[t]} (${A.byType[t].n})`), datasets: [{ data: tys.map(t => A.followers ? A.byType[t].avgER : A.byType[t].avgEng), backgroundColor: tys.map(typeColor), borderRadius: 4, borderSkipped: 'start', maxBarThickness: 64 }] },
+      options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${A.scoreLabel} rata-rata: ${A.followers ? f2(c.raw) + '%' : f0(c.raw)}` } } }, scales: { y: { beginAtZero: true, grid: gridOpts(), ticks: { callback: yFmt } }, x: { grid: { display: false } } } },
+    });
+    // tren ER
+    const latest = Math.max(...A.posts.map(p => p.t));
+    const asc = [...A.posts].filter(p => !p.pinned && p.t >= latest - 365 * 86400).sort((a, b) => a.t - b.t);
+    const val = p => A.followers ? p.er : p.eng;
+    const ma = asc.map((p, i) => { const w = asc.slice(Math.max(0, i - 4), i + 1).map(val); return { x: p.t * 1000, y: w.reduce((a, b) => a + b, 0) / w.length }; });
+    const tsets = tys.map(t => ({ type: 'scatter', label: TL[t], data: asc.filter(p => p.type === t).map(p => ({ x: p.t * 1000, y: val(p), p })), backgroundColor: typeColor(t), borderColor: surface, borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 7 }));
+    tsets.push({ type: 'line', label: 'Rata-rata bergerak (5 post)', data: ma, borderColor: neutral, borderWidth: 2, pointRadius: 0, tension: 0 });
+    const tmin = asc.length ? asc[0].t * 1000 : 0, tmax = asc.length ? asc[asc.length - 1].t * 1000 : 1;
+    mkChart('cTrend', {
+      data: { datasets: tsets },
+      options: {
+        interaction: { mode: 'nearest', intersect: true },
+        plugins: { tooltip: { callbacks: { title: it => it[0] && it[0].raw.p ? dTime(it[0].raw.p.t) : dtf.format(new Date(it[0].raw.x)), label: c => c.raw.p ? `${TL[c.raw.p.type]} · ${A.scoreLabel} ${A.followers ? f2(c.raw.y) + '%' : f0(c.raw.y)} · ${f0(c.raw.p.likes)} likes` : `Rata-rata: ${yFmt(c.raw.y)}` } } },
+        scales: { x: { type: 'linear', min: tmin, max: tmax, grid: { display: false }, ticks: { maxTicksLimit: 6, callback: v => new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: '2-digit' }).format(new Date(v)) } }, y: { beginAtZero: true, grid: gridOpts(), ticks: { callback: yFmt } } },
+      },
+    });
+    // jam online insights
+    if (A._audHours) mkChart('cAudH', { type: 'bar', data: { labels: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), datasets: [{ data: A._audHours, backgroundColor: accent, borderRadius: 3 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { grid: gridOpts(), beginAtZero: true }, x: { grid: { display: false } } } } });
+    // retention reel (insights)
+    if (A.aud.ins.retention && document.getElementById('cRet')) {
+      const rt = A.aud.ins.retention;
+      mkChart('cRet', { type: 'line', data: { labels: rt.map((_, i) => i), datasets: [{ data: rt, borderColor: accent, backgroundColor: accent, borderWidth: 2, pointRadius: 0, tension: 0.2 }] }, options: { plugins: { legend: { display: false }, tooltip: { callbacks: { title: it => 'Titik ' + it[0].label, label: c => f1(c.raw) } } }, scales: { y: { beginAtZero: true, grid: gridOpts() }, x: { grid: { display: false }, title: { display: true, text: 'Progres video →' } } } } });
+    }
+    // growth
+    if (A.growth) {
+      const sn = A.snapshots, labels = sn.map(s => dDateMs(s.captureTs));
+      const line = (id, data, fmt) => mkChart(id, { type: 'line', data: { labels, datasets: [{ data, borderColor: accent, backgroundColor: accent, borderWidth: 2, pointRadius: 4, pointBorderColor: surface, pointBorderWidth: 2, tension: 0.2 }] }, options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } }, scales: { y: { grid: gridOpts(), ticks: { callback: fmt } }, x: { grid: { display: false } } } } });
+      line('cGF', sn.map(s => s.followers), v => f0(v));
+      line('cGE', sn.map(s => s.avgER), v => f2(v) + '%');
+      if (document.getElementById('cGV')) line('cGV', sn.map(s => s.avgViews), v => f0(v));
+    }
+  }
+
+  // ---------- tooltip for heatmaps ----------
+  const tip = $('#tip');
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (!el) { tip.hidden = true; return; }
+    tip.innerHTML = esc(el.dataset.tip).replace(/\n/g, '<br>'); tip.hidden = false;
+  });
+  document.addEventListener('mousemove', e => {
+    if (tip.hidden) return;
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = e.clientY + 16 + tip.offsetHeight > innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 16;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+
+  // ---------- export ----------
+  function download(name, content, type) {
+    const blob = new Blob([content], { type });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  const csvCell = v => { if (v == null) return ''; const s = String(v); return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const toCsv = (head, rows) => '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+  const isoJkt = t => t ? new Date((t + 7 * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 16) : '';
+  $('#btnCsv').addEventListener('click', () => {
+    const head = ['shortcode', 'url', 'tipe', 'waktu_wib', 'hari', 'jam', 'owner', 'collab', 'pinned', 'likes', 'komentar', 'views', 'durasi_detik', 'saves', 'shares', 'repost', 'reach', 'engagement', 'er_followers_pct', 'er_reach_pct', 'jumlah_hashtag', 'hashtag', 'ada_cta', 'panjang_caption', 'caption'];
+    const rows = A.posts.map(p => [p.code, p.url, TL[p.type], isoJkt(p.t), DAYS[p.dow], p.hour, p.owner, p.collab ? 1 : 0, p.pinned ? 1 : 0, p.likes, p.comments, p.views, p.duration != null ? Math.round(p.duration * 10) / 10 : '', p.saves, p.shares, p.reposts, p.reach, p.eng, p.er != null ? p.er.toFixed(3) : '', p.erReach != null ? p.erReach.toFixed(3) : '', p.hashtags.length, p.hashtags.map(h => '#' + h).join(' '), p.cta ? 1 : 0, p.capLen, p.caption]);
+    download(`ig-${A.account}-posts.csv`, toCsv(head, rows), 'text/csv;charset=utf-8');
+  });
+  $('#btnCsvC').addEventListener('click', () => {
+    const head = ['shortcode_post', 'tipe_post', 'waktu_wib', 'username', 'komentar', 'likes_komentar', 'jenis', 'sentimen', 'bahasa', 'menit_setelah_posting', 'balasan'];
+    const rows = A.aud.pub.rows.map(c => [c.code || '', c.postType ? TL[c.postType] : '', isoJkt(c.t), c.user, c.text, c.likes, Core.COMMENT_TYPES[c.type], { pos: 'positif', neg: 'negatif', neu: 'netral' }[c.sent], c.lang, c.delay != null ? Math.round(c.delay / 60) : '', c.parent ? 1 : 0]);
+    download(`ig-${A.account}-komentar.csv`, toCsv(head, rows), 'text/csv;charset=utf-8');
+  });
+  $('#btnCopy').addEventListener('click', async () => {
+    const ta = $('#sumText');
+    if (!ta) return;
+    toast(await copyText(ta.value) ? 'Ringkasan disalin ke clipboard ✓' : 'Gagal menyalin — pilih teks lalu tekan Ctrl/⌘+C');
+    const card = $('#copyCard');
+    if (card) window.scrollTo({ top: card.getBoundingClientRect().top + scrollY - 70, behavior: 'smooth' });
+  });
+  $('#btnPdf').addEventListener('click', () => {
+    const old = document.title;
+    document.title = `Laporan Instagram @${A.account} - ${new Date().toISOString().slice(0, 10)}`;
+    window.print();
+    setTimeout(() => document.title = old, 1000);
+  });
+  window.__igRenderTest = (st, acct) => { store = st; runAnalysis(acct); };
+})();
+</script>
+</body>
+</html>
